@@ -1,59 +1,22 @@
-#include <stdint.h>
-#include <stdbool.h>
+// parking_logic.c
 
-// External functions (would be linked at compile time)
-extern uint32_t Ultrasonic_MeasureDistance(void* sensor);
-extern void Motor_SetDirection(void* motor, int direction);
-extern void Motor_SetSpeed(void* motor, uint8_t speed);
-extern void delay_ms(uint32_t ms);
+#include "../inc/parking_logic.h"
+#include "../inc/motor_driver.h"
+#include "../inc/ultrasonic_driver.h"
+#include "../inc/ir_sensor.h"
+#include <Arduino.h>
 
-// Motor direction constants
-#define MOTOR_FORWARD 0
-#define MOTOR_BACKWARD 1
-#define MOTOR_STOP 2
-
-// Parking types
-typedef enum {
-    PARALLEL_PARKING,
-    PERPENDICULAR_PARKING
-} ParkingType;
-
-// Parking slot structure
-typedef struct {
-    ParkingType type;
-    uint32_t size;
-    uint32_t position; // Distance from current position
-} ParkingSlot;
-
-// Ultrasonic sensor structure (must match the one in ultrasonic_driver.c)
-typedef struct {
-    uint32_t trig_port;
-    uint8_t trig_pin;
-    uint32_t echo_port;
-    uint8_t echo_pin;
-} UltrasonicSensor;
-
-// Motor structure (must match the one in motor_driver.c)
-typedef struct {
-    uint32_t in1_port;
-    uint8_t in1_pin;
-    uint32_t in2_port;
-    uint8_t in2_pin;
-    uint32_t ena_port;
-    uint8_t ena_pin;
-    uint8_t pwm_channel;
-} Motor;
-
-bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSensor, ParkingSlot* slot) {
+bool DetectParkingSpace(UltrasonicSensor* ultrasonicSensor, IRSensor* leftIRSensor, IRSensor* rightIRSensor, ParkingSlot* slot) {
     // Constants for parking space detection
     const uint32_t MIN_PARALLEL_SIZE = 40;      // Minimum length for parallel parking in cm
     const uint32_t MIN_PERPENDICULAR_SIZE = 30; // Minimum width for perpendicular parking in cm
     const uint32_t DETECTION_THRESHOLD = 50;    // Distance indicating open space in cm
-    const uint32_t SAMPLING_INTERVAL_MS = 100;  // Sampling interval in milliseconds
+    const uint32_t SAMPLING_INTERVAL_MS = 100;  // Time between measurements
     const uint32_t MAX_SAMPLES = 100;           // Maximum number of samples to take
     
     // Variables to track space detection
-    uint32_t leftDistance, rightDistance;
+    uint32_t ultrasonicDistance;
+    bool leftIRDetected, rightIRDetected;
     uint32_t spaceStart = 0;
     uint32_t currentPosition = 0;
     uint32_t spaceSize = 0;
@@ -63,7 +26,7 @@ bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSen
     // External references to motors from main.c
     extern Motor leftMotor, rightMotor;
     
-    // Move forward slowly while measuring side distances
+    // Move forward slowly while measuring distances
     Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
     Motor_SetSpeed(&leftMotor, 30); // Slow speed for accurate detection
@@ -71,17 +34,21 @@ bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSen
     
     // Detection loop - sample distances while moving forward
     for (uint32_t i = 0; i < MAX_SAMPLES && !slotFound; i++) {
-        // Measure distances from both sides
-        leftDistance = Ultrasonic_MeasureDistance(leftSensor);
-        rightDistance = Ultrasonic_MeasureDistance(rightSensor);
+        // Measure distance from ultrasonic sensor (front-facing)
+        ultrasonicDistance = Ultrasonic_MeasureDistance(ultrasonicSensor);
+        
+        // Read IR sensors (side-facing)
+        leftIRDetected = IR_DetectObstacle(leftIRSensor);  // true if obstacle detected
+        rightIRDetected = IR_DetectObstacle(rightIRSensor); // true if obstacle detected
         
         // Check for open space on right side (assuming right-side parking)
-        if (!spaceDetected && rightDistance > DETECTION_THRESHOLD) {
+        // Using the right IR sensor (not detecting = open space)
+        if (!spaceDetected && !rightIRDetected) {
             // Space start detected
             spaceDetected = true;
             spaceStart = currentPosition;
-        } else if (spaceDetected && rightDistance < DETECTION_THRESHOLD) {
-            // Space end detected
+        } else if (spaceDetected && rightIRDetected) {
+            // Space end detected (IR now sees an obstacle again)
             spaceSize = currentPosition - spaceStart;
             
             // Determine parking type based on size
@@ -103,7 +70,7 @@ bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSen
         
         // Increment position counter (estimate distance moved)
         currentPosition += 2; // Approximately 2cm per iteration at this speed
-        delay_ms(SAMPLING_INTERVAL_MS);
+        delay(SAMPLING_INTERVAL_MS); // Using Arduino's delay function
     }
     
     // Stop motors regardless of whether space was found
@@ -114,82 +81,80 @@ bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSen
 }
 
 void ExecuteParallelParking(Motor* leftMotor, Motor* rightMotor, 
-                          UltrasonicSensor* frontSensor, 
-                          UltrasonicSensor* leftSensor, 
-                          UltrasonicSensor* rightSensor) {
+                          UltrasonicSensor* ultrasonicSensor, 
+                          IRSensor* leftIRSensor, 
+                          IRSensor* rightIRSensor) {
     // Safety thresholds
     const uint32_t SIDE_CLEARANCE_CM = 15;
-    const uint32_t FRONT_CLEARANCE_CM = 10;
     const uint32_t BACK_CLEARANCE_CM = 15;
     const uint32_t ALIGNED_THRESHOLD_CM = 10;
-    
+
     // Step 1: Position the car (move forward a bit past the space)
     Motor_SetDirection(leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
     Motor_SetSpeed(leftMotor, 40);
     Motor_SetSpeed(rightMotor, 40);
-    delay_ms(500);
-    
+    delay(500);
+
     // Step 2: Stop and prepare for reverse
     Motor_SetDirection(leftMotor, MOTOR_STOP);
     Motor_SetDirection(rightMotor, MOTOR_STOP);
-    delay_ms(500);
-    
+    delay(500);
+
     // Step 3: Reverse and turn right (first part of S-maneuver)
     Motor_SetDirection(leftMotor, MOTOR_BACKWARD);
     Motor_SetDirection(rightMotor, MOTOR_BACKWARD);
     Motor_SetSpeed(leftMotor, 40);
     Motor_SetSpeed(rightMotor, 20); // Lower speed makes right turn
-    
+
     // Continue until car begins to enter the space
-    while (Ultrasonic_MeasureDistance(rightSensor) > SIDE_CLEARANCE_CM) {
+    // Using right IR to detect when we're close to the side
+    while (!IR_DetectObstacle(rightIRSensor)) {
         // Safety check - don't hit anything behind us
-        if (Ultrasonic_MeasureDistance(frontSensor) < BACK_CLEARANCE_CM) {
+        if (Ultrasonic_MeasureDistance(ultrasonicSensor) < BACK_CLEARANCE_CM) {
             break;
         }
-        delay_ms(50);
+        delay(50);
     }
-    
+
     // Step 4: Straighten wheels while continuing backward
     Motor_SetSpeed(leftMotor, 30);
     Motor_SetSpeed(rightMotor, 30);
-    delay_ms(800);
-    
+    delay(800);
+
     // Step 5: Reverse and turn left to align with curb (second part of S-maneuver)
     Motor_SetSpeed(leftMotor, 20); // Lower speed makes left turn
     Motor_SetSpeed(rightMotor, 40);
-    
+
     // Continue until close to back obstacle or fully parked
-    while (Ultrasonic_MeasureDistance(frontSensor) > BACK_CLEARANCE_CM) {
-        // Done if aligned with curb
-        if (Ultrasonic_MeasureDistance(rightSensor) < ALIGNED_THRESHOLD_CM) {
+    while (Ultrasonic_MeasureDistance(ultrasonicSensor) > BACK_CLEARANCE_CM) {
+        // Done if aligned with side (IR sensor detects close to side)
+        if (IR_DetectObstacle(rightIRSensor)) {
             break;
         }
-        delay_ms(50);
+        delay(50);
     }
-    
+
     // Step 6: Final adjustments if needed
-    if (Ultrasonic_MeasureDistance(rightSensor) > ALIGNED_THRESHOLD_CM) {
+    if (!IR_DetectObstacle(rightIRSensor)) {
         // Adjust alignment with curb
         Motor_SetDirection(leftMotor, MOTOR_FORWARD);
         Motor_SetDirection(rightMotor, MOTOR_FORWARD);
         Motor_SetSpeed(leftMotor, 20);
         Motor_SetSpeed(rightMotor, 30);
-        delay_ms(300);
+        delay(300);
     }
-    
+
     // Step 7: Stop and complete
     Motor_SetDirection(leftMotor, MOTOR_STOP);
     Motor_SetDirection(rightMotor, MOTOR_STOP);
 }
 
 void ExecutePerpendicularParking(Motor* leftMotor, Motor* rightMotor, 
-                               UltrasonicSensor* frontSensor, 
-                               UltrasonicSensor* leftSensor, 
-                               UltrasonicSensor* rightSensor) {
+                               UltrasonicSensor* ultrasonicSensor, 
+                               IRSensor* leftIRSensor, 
+                               IRSensor* rightIRSensor) {
     // Safety thresholds
-    const uint32_t PERPENDICULAR_ENTRY_CM = 30;
-    const uint32_t FRONT_CLEARANCE_CM = 10;
     const uint32_t BACK_CLEARANCE_CM = 15;
     
     // Step 1: Position the car next to the parking space
@@ -197,59 +162,54 @@ void ExecutePerpendicularParking(Motor* leftMotor, Motor* rightMotor,
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
     Motor_SetSpeed(leftMotor, 40);
     Motor_SetSpeed(rightMotor, 40);
-    delay_ms(300);
+    delay(300);
     
     // Step 2: Stop and prepare for the turn
     Motor_SetDirection(leftMotor, MOTOR_STOP);
     Motor_SetDirection(rightMotor, MOTOR_STOP);
-    delay_ms(300);
+    delay(300);
     
     // Step 3: Make a sharp right turn while moving backward
     Motor_SetDirection(leftMotor, MOTOR_BACKWARD);
     Motor_SetDirection(rightMotor, MOTOR_BACKWARD);
     Motor_SetSpeed(leftMotor, 50);
     Motor_SetSpeed(rightMotor, 15); // Very slow on right for sharp turn
-    
+
     // Continue until car is perpendicular to the parking space
-    uint32_t startTime = 0; // Would normally get system time
-    uint32_t currentTime = 0;
-    uint32_t turnTimeout = 3000; // 3 seconds timeout for the turn
-    
-    while ((currentTime - startTime) < turnTimeout) {
+    unsigned long startTime = millis(); // Using Arduino's millis() for timing
+    unsigned long turnTimeout = 3000;   // 3 seconds timeout for the turn
+
+    while ((millis() - startTime) < turnTimeout) {
         // Safety check - don't hit anything behind us
-        if (Ultrasonic_MeasureDistance(frontSensor) < BACK_CLEARANCE_CM) {
+        if (Ultrasonic_MeasureDistance(ultrasonicSensor) < BACK_CLEARANCE_CM) {
             break;
         }
         
         // Check if we've turned enough to see the open space
-        if (Ultrasonic_MeasureDistance(rightSensor) > PERPENDICULAR_ENTRY_CM) {
+        if (!IR_DetectObstacle(rightIRSensor)) {
             break;
         }
         
-        delay_ms(50);
-        currentTime += 50; // Update our simulated timer
+        delay(50);
     }
-    
+
     // Step 4: Straighten wheels and back into the space
     Motor_SetSpeed(leftMotor, 30);
     Motor_SetSpeed(rightMotor, 30);
-    
+
     // Continue until close to back obstacle
-    while (Ultrasonic_MeasureDistance(frontSensor) > BACK_CLEARANCE_CM) {
-        delay_ms(50);
+    while (Ultrasonic_MeasureDistance(ultrasonicSensor) > BACK_CLEARANCE_CM) {
+        delay(50);
     }
     
     // Step 5: Final adjustments if needed
-    if (Ultrasonic_MeasureDistance(rightSensor) > 15 || 
-        Ultrasonic_MeasureDistance(leftSensor) > 15) {
+    if (!IR_DetectObstacle(leftIRSensor) || !IR_DetectObstacle(rightIRSensor)) {
         // Not centered in the spot, make adjustments
-        // This is a simplified adjustment - in a real system, 
-        // you would need more sophisticated logic
         Motor_SetDirection(leftMotor, MOTOR_FORWARD);
         Motor_SetDirection(rightMotor, MOTOR_FORWARD);
         Motor_SetSpeed(leftMotor, 20);
         Motor_SetSpeed(rightMotor, 20);
-        delay_ms(200);
+        delay(200);
     }
     
     // Step 6: Stop and complete

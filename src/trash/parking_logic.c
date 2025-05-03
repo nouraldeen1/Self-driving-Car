@@ -1,14 +1,48 @@
-// parking_logic.c
-#include "parking_logic.h"
+#include <stdint.h>
 #include <stdbool.h>
 
-// Helper function for delays
-static void delay_ms(uint32_t ms) {
-    // Using previously defined delay_us function
-    for (uint32_t i = 0; i < ms; i++) {
-        delay_us(1000); // 1000us = 1ms
-    }
-}
+// External functions (would be linked at compile time)
+extern uint32_t Ultrasonic_MeasureDistance(void* sensor);
+extern void Motor_SetDirection(void* motor, int direction);
+extern void Motor_SetSpeed(void* motor, uint8_t speed);
+extern void delay_ms(uint32_t ms);
+
+// Motor direction constants
+#define MOTOR_FORWARD 0
+#define MOTOR_BACKWARD 1
+#define MOTOR_STOP 2
+
+// Parking types
+typedef enum {
+    PARALLEL_PARKING,
+    PERPENDICULAR_PARKING
+} ParkingType;
+
+// Parking slot structure
+typedef struct {
+    ParkingType type;
+    uint32_t size;
+    uint32_t position; // Distance from current position
+} ParkingSlot;
+
+// Ultrasonic sensor structure (must match the one in ultrasonic_driver.c)
+typedef struct {
+    uint32_t trig_port;
+    uint8_t trig_pin;
+    uint32_t echo_port;
+    uint8_t echo_pin;
+} UltrasonicSensor;
+
+// Motor structure (must match the one in motor_driver.c)
+typedef struct {
+    uint32_t in1_port;
+    uint8_t in1_pin;
+    uint32_t in2_port;
+    uint8_t in2_pin;
+    uint32_t ena_port;
+    uint8_t ena_pin;
+    uint8_t pwm_channel;
+} Motor;
 
 bool DetectParkingSpace(UltrasonicSensor* leftSensor, UltrasonicSensor* rightSensor, ParkingSlot* slot) {
     // Constants for parking space detection

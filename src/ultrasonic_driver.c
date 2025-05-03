@@ -1,36 +1,20 @@
-#include <stdint.h>
+// ultrasonic_driver.c
+#include "../inc/ultrasonic_driver.h"
 
-// External GPIO and Timer functions (would be linked at compile time)
-extern void GPIO_ClockEnable(uint32_t gpio_base);
-extern void GPIO_PinInit(uint32_t gpio_base, uint8_t pin, int mode);
-extern void GPIO_PinWrite(uint32_t gpio_base, uint8_t pin, int state);
-extern int GPIO_PinRead(uint32_t gpio_base, uint8_t pin);
-extern void Timer_Init(uint32_t timer_base, uint32_t prescaler, uint32_t auto_reload);
-extern void Timer_Start(uint32_t timer_base);
-extern uint32_t Timer_GetCounter(uint32_t timer_base);
-
-// GPIO pin modes and states
-#define GPIO_INPUT 0
-#define GPIO_OUTPUT 1
-#define GPIO_LOW 0
-#define GPIO_HIGH 1
-
-// Timer base address
+// Timer configuration for accurate delay and pulse measurement
 #define TIM2_BASE 0x40000000
-#define SYSTEM_CLOCK 16000000 // 16 MHz clock assumed
+#define TIM_CR1_OFFSET 0x00
+#define TIM_CNT_OFFSET 0x24
+#define TIM_PSC_OFFSET 0x28
+#define TIM_ARR_OFFSET 0x2C
+#define RCC_APB1ENR_OFFSET 0x40
 
-// SysTick definitions for delay
 #define SYSTICK_BASE 0xE000E010
 #define SYSTICK_CTRL_OFFSET 0x00
 #define SYSTICK_LOAD_OFFSET 0x04
-#define SYSTICK_VAL_OFFSET  0x08
+#define SYSTICK_VAL_OFFSET 0x08
 
-typedef struct {
-    uint32_t trig_port;
-    uint8_t trig_pin;
-    uint32_t echo_port;
-    uint8_t echo_pin;
-} UltrasonicSensor;
+#define SYSTEM_CLOCK 16000000 // 16 MHz clock assumed
 
 void delay_us(uint32_t us) {
     // Configure SysTick for microsecond delay
@@ -45,6 +29,29 @@ void delay_us(uint32_t us) {
     *(volatile uint32_t*)(SYSTICK_BASE + SYSTICK_CTRL_OFFSET) = 0;
 }
 
+void Timer_Init() {
+    // Enable Timer2 clock
+    uint32_t rcc_apb1enr = *(volatile uint32_t*)(RCC_BASE + RCC_APB1ENR_OFFSET);
+    rcc_apb1enr |= (1 << 0); // TIM2 enable
+    *(volatile uint32_t*)(RCC_BASE + RCC_APB1ENR_OFFSET) = rcc_apb1enr;
+    
+    // Configure timer for microsecond resolution
+    *(volatile uint32_t*)(TIM2_BASE + TIM_PSC_OFFSET) = (SYSTEM_CLOCK / 1000000) - 1; // 1 μs resolution
+    *(volatile uint32_t*)(TIM2_BASE + TIM_ARR_OFFSET) = 0xFFFFFFFF; // Maximum count
+}
+
+void Timer_Start() {
+    // Reset counter
+    *(volatile uint32_t*)(TIM2_BASE + TIM_CNT_OFFSET) = 0;
+    
+    // Enable timer
+    *(volatile uint32_t*)(TIM2_BASE + TIM_CR1_OFFSET) |= 0x01;
+}
+
+uint32_t Timer_GetCounter() {
+    return *(volatile uint32_t*)(TIM2_BASE + TIM_CNT_OFFSET);
+}
+
 void Ultrasonic_Init(UltrasonicSensor* sensor) {
     // Enable GPIO clocks
     GPIO_ClockEnable(sensor->trig_port);
@@ -57,12 +64,7 @@ void Ultrasonic_Init(UltrasonicSensor* sensor) {
     GPIO_PinInit(sensor->echo_port, sensor->echo_pin, GPIO_INPUT);
     
     // Initialize timer for pulse measurement
-    static uint8_t timer_initialized = 0;
-    if (!timer_initialized) {
-        // Configure timer for microsecond resolution
-        Timer_Init(TIM2_BASE, (SYSTEM_CLOCK / 1000000) - 1, 0xFFFFFFFF); // 1 μs resolution
-        timer_initialized = 1;
-    }
+    Timer_Init();
 }
 
 uint32_t Ultrasonic_MeasureDistance(UltrasonicSensor* sensor) {
@@ -74,25 +76,22 @@ uint32_t Ultrasonic_MeasureDistance(UltrasonicSensor* sensor) {
     GPIO_PinWrite(sensor->trig_port, sensor->trig_pin, GPIO_LOW);
     
     // Wait for echo to go high
-    uint32_t timeout = 0;
-    while(GPIO_PinRead(sensor->echo_port, sensor->echo_pin) == GPIO_LOW) {
-        timeout++;
-        if (timeout > 30000) return 0; // Timeout if no response
-    }
+    while(GPIO_PinRead(sensor->echo_port, sensor->echo_pin) == GPIO_LOW);
     
     // Start timer
-    Timer_Start(TIM2_BASE);
+    Timer_Start();
     
     // Wait for echo to go low or timeout (max distance)
-    timeout = 0;
-    while(GPIO_PinRead(sensor->echo_port, sensor->echo_pin) == GPIO_HIGH) {
+    uint32_t timeout = 0;
+    while(GPIO_PinRead(sensor->echo_port, sensor->echo_pin) == GPIO_HIGH && timeout < 23200) {
         timeout++;
-        if (timeout > 30000) break; // Timeout if echo stuck high
     }
     
     // Get pulse duration in microseconds
-    uint32_t duration = Timer_GetCounter(TIM2_BASE);
+    uint32_t duration = Timer_GetCounter();
     
     // Calculate distance in cm: duration (μs) / 58 = distance (cm)
+    // Speed of sound is approximately 343 m/s or 34300 cm/s
+    // Time for sound to travel 1 cm and back = 2 / 34300 s = 58.31 μs
     return duration / 58;
 }

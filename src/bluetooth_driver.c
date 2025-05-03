@@ -1,47 +1,6 @@
-#include <stdint.h>
-#include <stdbool.h>
+// bluetooth_driver.c
+#include "../inc/bluetooth_driver.h"
 #include <string.h>
-
-// External UART functions (would be linked at compile time)
-extern void UART_Init(void* config);
-extern void UART_TransmitString(uint32_t uart_base, const char* str);
-extern bool UART_IsDataAvailable(uint32_t uart_base);
-extern uint8_t UART_Receive(uint32_t uart_base);
-extern void UART_EnableRxInterrupt(uint32_t uart_base);
-
-// Command definitions
-typedef enum {
-    COMMAND_NONE,
-    COMMAND_START_PARKING,
-    COMMAND_STOP,
-    COMMAND_MOVE_FORWARD,
-    COMMAND_MOVE_BACKWARD,
-    COMMAND_TURN_LEFT,
-    COMMAND_TURN_RIGHT
-} Command;
-
-// Maximum command length
-#define BT_MAX_CMD_LENGTH 20
-
-// UART configuration structure (must match the one in uart_driver.c)
-typedef struct {
-    uint32_t uart_base;
-    uint32_t tx_port;
-    uint8_t tx_pin;
-    uint32_t rx_port;
-    uint8_t rx_pin;
-    uint8_t alt_func;
-    int baud_rate;
-} UART_Config;
-
-// Bluetooth module structure
-typedef struct {
-    UART_Config uart;
-    char command_buffer[BT_MAX_CMD_LENGTH];
-    uint8_t buffer_index;
-    bool command_ready;
-    Command last_command;
-} BluetoothModule;
 
 // Command strings
 const char* COMMAND_START_PARKING_STR = "START";
@@ -122,7 +81,8 @@ void Bluetooth_ProcessReceivedData(BluetoothModule* bt, uint8_t data) {
     }
 }
 
-// Function to be called from the USART IRQ handler
+// UART RX interrupt handler
+// Note: This function should be called from the USART IRQ handler in the main application
 void USART_IRQHandler(BluetoothModule* bt) {
     if (UART_IsDataAvailable(bt->uart.uart_base)) {
         uint8_t data = UART_Receive(bt->uart.uart_base);

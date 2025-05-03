@@ -1,77 +1,104 @@
-#include <stdint.h>
+// timer_driver.c
+#include "../inc/timer_driver.h"
+#include <Arduino.h>
 
-// Timer base addresses
-#define TIM2_BASE 0x40000000
-#define TIM3_BASE 0x40000400
-#define TIM4_BASE 0x40000800
-#define TIM5_BASE 0x40000C00
+// Arduino Uno timer base addresses (not used directly in Arduino framework but keeping for API compatibility)
+#define TIMER0_BASE 0x00
+#define TIMER1_BASE 0x01
+#define TIMER2_BASE 0x02
 
-// Timer register offsets
-#define TIM_CR1_OFFSET   0x00
-#define TIM_CR2_OFFSET   0x04
-#define TIM_DIER_OFFSET  0x0C
-#define TIM_SR_OFFSET    0x10
-#define TIM_EGR_OFFSET   0x14
-#define TIM_CNT_OFFSET   0x24
-#define TIM_PSC_OFFSET   0x28
-#define TIM_ARR_OFFSET   0x2C
-
-// RCC register base address
-#define RCC_BASE           0x40023800
-#define RCC_APB1ENR_OFFSET 0x40
+// Arduino timer implementation - simplified for compatibility
 
 void Timer_Init(uint32_t timer_base, uint32_t prescaler, uint32_t auto_reload) {
-    // Enable timer clock
-    uint32_t rcc_apb1enr = *(volatile uint32_t*)(RCC_BASE + RCC_APB1ENR_OFFSET);
-    
-    if (timer_base == TIM2_BASE) {
-        rcc_apb1enr |= (1 << 0); // TIM2 enable
-    } else if (timer_base == TIM3_BASE) {
-        rcc_apb1enr |= (1 << 1); // TIM3 enable
-    } else if (timer_base == TIM4_BASE) {
-        rcc_apb1enr |= (1 << 2); // TIM4 enable
-    } else if (timer_base == TIM5_BASE) {
-        rcc_apb1enr |= (1 << 3); // TIM5 enable
+    // In Arduino, we don't manipulate timer registers directly in typical applications
+    // This function serves as a compatibility layer
+
+    // For more advanced timer control, we would need direct register access:
+    if (timer_base == TIMER1_BASE) {
+        // Timer1 is a 16-bit timer we could use for custom timing
+        noInterrupts(); // Disable interrupts during timer setup
+        
+        // Reset Timer1 control registers
+        TCCR1A = 0;
+        TCCR1B = 0;
+        
+        // Set prescaler
+        // Arduino 16MHz clock / prescaler = timer clock
+        // Prescaler options: 1, 8, 64, 256, 1024
+        if (prescaler <= 1) TCCR1B |= (1 << CS10); // No prescaling
+        else if (prescaler <= 8) TCCR1B |= (1 << CS11); // /8 prescaler
+        else if (prescaler <= 64) TCCR1B |= (1 << CS11) | (1 << CS10); // /64 prescaler
+        else if (prescaler <= 256) TCCR1B |= (1 << CS12); // /256 prescaler
+        else TCCR1B |= (1 << CS12) | (1 << CS10); // /1024 prescaler
+        
+        // Set compare match value (auto reload)
+        OCR1A = auto_reload;
+        
+        // Enable CTC mode
+        TCCR1B |= (1 << WGM12);
+        
+        interrupts(); // Re-enable interrupts
     }
-    
-    *(volatile uint32_t*)(RCC_BASE + RCC_APB1ENR_OFFSET) = rcc_apb1enr;
-    
-    // Configure timer
-    *(volatile uint32_t*)(timer_base + TIM_PSC_OFFSET) = prescaler;
-    *(volatile uint32_t*)(timer_base + TIM_ARR_OFFSET) = auto_reload;
-    
-    // Generate an update event to load the registers
-    *(volatile uint32_t*)(timer_base + TIM_EGR_OFFSET) = 0x01;
 }
 
 void Timer_Start(uint32_t timer_base) {
-    // Reset counter
-    *(volatile uint32_t*)(timer_base + TIM_CNT_OFFSET) = 0;
-    
-    // Enable timer
-    *(volatile uint32_t*)(timer_base + TIM_CR1_OFFSET) |= 0x01;
+    if (timer_base == TIMER1_BASE) {
+        // Reset counter
+        TCNT1 = 0;
+        
+        // Enable compare match interrupt if needed
+        // TIMSK1 |= (1 << OCIE1A);
+    }
 }
 
 void Timer_Stop(uint32_t timer_base) {
-    // Disable timer
-    *(volatile uint32_t*)(timer_base + TIM_CR1_OFFSET) &= ~0x01;
+    if (timer_base == TIMER1_BASE) {
+        // Disable all clock sources to stop the timer
+        TCCR1B &= ~((1 << CS12) | (1 << CS11) | (1 << CS10));
+    }
 }
 
 uint32_t Timer_GetCounter(uint32_t timer_base) {
-    return *(volatile uint32_t*)(timer_base + TIM_CNT_OFFSET);
+    if (timer_base == TIMER1_BASE) {
+        return TCNT1;
+    }
+    return 0;
 }
 
 void Timer_EnableInterrupt(uint32_t timer_base) {
-    // Enable update interrupt
-    *(volatile uint32_t*)(timer_base + TIM_DIER_OFFSET) |= 0x01;
+    if (timer_base == TIMER1_BASE) {
+        // Enable Timer1 compare match interrupt
+        TIMSK1 |= (1 << OCIE1A);
+    }
 }
 
 void Timer_DisableInterrupt(uint32_t timer_base) {
-    // Disable update interrupt
-    *(volatile uint32_t*)(timer_base + TIM_DIER_OFFSET) &= ~0x01;
+    if (timer_base == TIMER1_BASE) {
+        // Disable Timer1 compare match interrupt
+        TIMSK1 &= ~(1 << OCIE1A);
+    }
 }
 
 void Timer_ClearInterruptFlag(uint32_t timer_base) {
-    // Clear update interrupt flag
-    *(volatile uint32_t*)(timer_base + TIM_SR_OFFSET) &= ~0x01;
+    if (timer_base == TIMER1_BASE) {
+        // Clear Timer1 compare match interrupt flag
+        TIFR1 |= (1 << OCF1A);
+    }
+}
+
+void Timer_SetAutoReload(uint32_t timer_base, uint32_t auto_reload) {
+    if (timer_base == TIMER1_BASE) {
+        // Set Timer1 compare match value
+        OCR1A = auto_reload;
+    }
+}
+
+// Helper function for microsecond delays - implemented using Arduino's delayMicroseconds
+void delay_us(uint32_t us) {
+    delayMicroseconds(us);
+}
+
+// Helper function for millisecond delays - implemented using Arduino's delay
+void delay_ms(uint32_t ms) {
+    delay(ms);
 }

@@ -1,19 +1,10 @@
-#include <stdint.h>
-
-// External GPIO functions (would be linked at compile time)
-extern void GPIO_ClockEnable(uint32_t gpio_base);
-extern void GPIO_PinInit(uint32_t gpio_base, uint8_t pin, int mode);
-extern void GPIO_PinWrite(uint32_t gpio_base, uint8_t pin, int state);
-extern void GPIO_PinSetAlternateFunction(uint32_t gpio_base, uint8_t pin, uint8_t alt_func);
-
-// GPIO pin modes and states
-#define GPIO_OUTPUT 1
-#define GPIO_ALT_FUNCTION 2
-#define GPIO_LOW 0
-#define GPIO_HIGH 1
+// motor_driver.c
+#include "../inc/motor_driver.h"
 
 // PWM Timer Configuration
 #define TIM3_BASE 0x40000400
+#define RCC_BASE 0x40021000 // Base address for RCC
+#define RCC_APB1ENR_OFFSET 0x1C // Offset for APB1ENR register
 #define TIM_CR1_OFFSET 0x00
 #define TIM_CCMR1_OFFSET 0x18
 #define TIM_CCMR2_OFFSET 0x1C
@@ -23,28 +14,6 @@ extern void GPIO_PinSetAlternateFunction(uint32_t gpio_base, uint8_t pin, uint8_
 #define TIM_CCR3_OFFSET 0x3C
 #define TIM_CCR4_OFFSET 0x40
 #define TIM_ARR_OFFSET 0x2C
-
-// RCC base and APB1 peripheral clock enable register offset
-#define RCC_BASE 0x40023800
-#define RCC_APB1ENR_OFFSET 0x40
-
-// Motor direction
-typedef enum {
-    MOTOR_FORWARD,
-    MOTOR_BACKWARD,
-    MOTOR_STOP
-} MotorDirection;
-
-// Motor structure
-typedef struct {
-    uint32_t in1_port;
-    uint8_t in1_pin;
-    uint32_t in2_port;
-    uint8_t in2_pin;
-    uint32_t ena_port;
-    uint8_t ena_pin;
-    uint8_t pwm_channel;
-} Motor;
 
 void PWM_Init() {
     // Enable TIM3 clock
