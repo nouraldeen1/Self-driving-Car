@@ -1,144 +1,94 @@
 // main.c
-#include "../inc/main.h"
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include "../inc/gpio_driver.h"
-#include "../inc/ultrasonic_driver.h"
-#include "../inc/motor_driver.h"
+#include "../inc/timer_driver.h"
+#include "../inc/uart_driver.h"
 #include "../inc/bluetooth_driver.h"
+#include "../inc/motor_driver.h"
+#include "../inc/ultrasonic_driver.h"
+#include "../inc/ir_sensor.h"
+#include "../inc/pwm_driver.h"
 #include "../inc/parking_logic.h"
-#include <../inc/pwm_driver.h>
+
+// Define LED pin
+#define LED_PIN 13 // Arduino Uno onboard LED
 
 // Global variables for car hardware
 Motor leftMotor, rightMotor;
-UltrasonicSensor frontSensor, leftSensor, rightSensor;
+UltrasonicSensor ultrasonicSensor;
+IRSensor leftIRSensor, rightIRSensor;
 BluetoothModule bluetooth;
 
-// Timer for general purpose delays
-#define DELAY_TIMER_BASE TIM5_BASE
+// Forward declarations
+void HardwareInit(void);
+void SetStatusLED(GPIO_PinState state);
+void BlinkStatusLED(uint8_t times);
 
-void SystemInit(void) {
-    // Enable HSI (High-Speed Internal) oscillator - 16 MHz
-    // RCC_CR register: enable HSI
-    *(volatile uint32_t*)(RCC_BASE + 0x00) |= (1 << 0);
-    
-    // Wait for HSI to be ready
-    while (!(*(volatile uint32_t*)(RCC_BASE + 0x00) & (1 << 1)));
-    
-    // Set HSI as system clock source
-    // RCC_CFGR register: set system clock source
-    *(volatile uint32_t*)(RCC_BASE + 0x08) &= ~0x03; // Clear bits
-    *(volatile uint32_t*)(RCC_BASE + 0x08) |= 0x00; // HSI as system clock
-    
-    // Wait for HSI to be used as system clock
-    while ((*(volatile uint32_t*)(RCC_BASE + 0x08) & 0x0C) != 0x00);
-    
-    // Initialize delay timer (TIM5)
-    Timer_Init(DELAY_TIMER_BASE, 16-1, 0xFFFFFFFF);
-}
+// UART RX interrupt handler
 
-void delay_us(uint32_t us) {
-    // Reset counter
-    *(volatile uint32_t*)(DELAY_TIMER_BASE + TIM_CNT_OFFSET) = 0;
-    
-    // Start timer
-    *(volatile uint32_t*)(DELAY_TIMER_BASE + TIM_CR1_OFFSET) |= 0x01;
-    
-    // Wait until counter reaches desired value
-    // Each timer tick is 1us (with 16MHz clock and prescaler=16)
-    while (*(volatile uint32_t*)(DELAY_TIMER_BASE + TIM_CNT_OFFSET) < us);
-    
-    // Stop timer
-    *(volatile uint32_t*)(DELAY_TIMER_BASE + TIM_CR1_OFFSET) &= ~0x01;
-}
-
-void delay_ms(uint32_t ms) {
-    for (uint32_t i = 0; i < ms; i++) {
-        delay_us(1000);
-    }
-}
 
 void SetStatusLED(GPIO_PinState state) {
-    GPIO_PinWrite(LED_PORT, LED_PIN, state);
+    GPIO_Write(LED_PIN, state);
 }
 
 void BlinkStatusLED(uint8_t times) {
     for (uint8_t i = 0; i < times; i++) {
-        SetStatusLED(GPIO_HIGH);
+        GPIO_Write(LED_PIN, GPIO_HIGH);
         delay_ms(200);
-        SetStatusLED(GPIO_LOW);
+        GPIO_Write(LED_PIN, GPIO_LOW);
         delay_ms(200);
     }
 }
 
 void HardwareInit(void) {
-    // Initialize GPIO for status LED
-    GPIO_ClockEnable(LED_PORT);
-    GPIO_PinInit(LED_PORT, LED_PIN, GPIO_OUTPUT);
-    SetStatusLED(GPIO_LOW);
+    // Initialize LED pin
+    GPIO_Init(LED_PIN, GPIO_OUTPUT);
+    GPIO_Write(LED_PIN, GPIO_LOW);
     
     // Configure left motor
-    leftMotor.in1_port = GPIOB_BASE;
-    leftMotor.in1_pin = 0;
-    leftMotor.in2_port = GPIOB_BASE;
-    leftMotor.in2_pin = 1;
-    leftMotor.ena_port = GPIOB_BASE;
-    leftMotor.ena_pin = 4;
-    leftMotor.pwm_channel = 1;
+    leftMotor.in1_pin = 2;
+    leftMotor.in2_pin = 3;
+    leftMotor.ena_pin = 5;  // PWM pin
     Motor_Init(&leftMotor);
     
     // Configure right motor
-    rightMotor.in1_port = GPIOB_BASE;
-    rightMotor.in1_pin = 2;
-    rightMotor.in2_port = GPIOB_BASE;
-    rightMotor.in2_pin = 3;
-    rightMotor.ena_port = GPIOB_BASE;
-    rightMotor.ena_pin = 5;
-    rightMotor.pwm_channel = 2;
+    rightMotor.in1_pin = 4;
+    rightMotor.in2_pin = 7;
+    rightMotor.ena_pin = 6;  // PWM pin
     Motor_Init(&rightMotor);
     
-    // Configure sensors
-    frontSensor.trig_port = GPIOA_BASE;
-    frontSensor.trig_pin = 0;
-    frontSensor.echo_port = GPIOA_BASE;
-    frontSensor.echo_pin = 1;
-    Ultrasonic_Init(&frontSensor);
+    // Configure ultrasonic sensor
+    ultrasonicSensor.trig_pin = 8;
+    ultrasonicSensor.echo_pin = 9;
+    Ultrasonic_Init(&ultrasonicSensor);
     
-    leftSensor.trig_port = GPIOA_BASE;
-    leftSensor.trig_pin = 2;
-    leftSensor.echo_port = GPIOA_BASE;
-    leftSensor.echo_pin = 3;
-    Ultrasonic_Init(&leftSensor);
+    // Configure IR sensors
+    leftIRSensor.pin = 14;  // A0
+    leftIRSensor.isAnalog = true;
+    leftIRSensor.threshold = 500;
+    IR_Init(&leftIRSensor);
     
-    rightSensor.trig_port = GPIOA_BASE;
-    rightSensor.trig_pin = 4;
-    rightSensor.echo_port = GPIOA_BASE;
-    rightSensor.echo_pin = 5;
-    Ultrasonic_Init(&rightSensor);
+    rightIRSensor.pin = 15;  // A1
+    rightIRSensor.isAnalog = true;
+    rightIRSensor.threshold = 500;
+    IR_Init(&rightIRSensor);
     
-    // Initialize Bluetooth
-    bluetooth.uart.uart_base = USART2_BASE;
-    bluetooth.uart.tx_port = GPIOA_BASE;
-    bluetooth.uart.tx_pin = 2;
-    bluetooth.uart.rx_port = GPIOA_BASE;
-    bluetooth.uart.rx_pin = 3;
-    bluetooth.uart.alt_func = 7; // AF7 for USART2 on GPIOA
+    // Initialize Bluetooth (HC-05)
+    bluetooth.uart.tx_pin = 1;
+    bluetooth.uart.rx_pin = 0;
     bluetooth.uart.baud_rate = UART_BAUD_9600;
     Bluetooth_Init(&bluetooth);
+    
+    // Enable global interrupts
+    sei();
     
     // Blink LED to indicate initialization complete
     BlinkStatusLED(3);
 }
 
-// USART2 IRQ Handler
-void USART2_IRQHandler(void) {
-    if (UART_IsDataAvailable(bluetooth.uart.uart_base)) {
-        uint8_t data = UART_Receive(bluetooth.uart.uart_base);
-        Bluetooth_ProcessReceivedData(&bluetooth, data);
-    }
-}
-
 int main(void) {
-    // Initialize system and hardware
-    SystemInit();
+    // Initialize hardware
     HardwareInit();
     
     // Send startup message
@@ -160,16 +110,16 @@ int main(void) {
                     
                     // Move forward and detect parking space
                     Bluetooth_SendMessage(&bluetooth, "Scanning for parking space...");
-                    if (DetectParkingSpace(&frontSensor, &leftSensor, &rightSensor, &slot)) {
+                    if (DetectParkingSpace(&ultrasonicSensor, &leftIRSensor, &rightIRSensor, &slot)) {
                         // Execute parking maneuver based on detected slot
                         if (slot.type == PARALLEL_PARKING) {
                             Bluetooth_SendMessage(&bluetooth, "Parallel parking slot detected");
                             ExecuteParallelParking(&leftMotor, &rightMotor, 
-                                                &frontSensor, &leftSensor, &rightSensor);
+                                                &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
                         } else {
                             Bluetooth_SendMessage(&bluetooth, "Perpendicular parking slot detected");
                             ExecutePerpendicularParking(&leftMotor, &rightMotor,
-                                                    &frontSensor, &leftSensor, &rightSensor);
+                                                    &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
                         }
                         
                         // Send completion status via Bluetooth
@@ -231,7 +181,7 @@ int main(void) {
         }
         
         // Obstacle detection - safety feature
-        if (Ultrasonic_MeasureDistance(&frontSensor) < 10) {
+        if (Ultrasonic_MeasureDistance(&ultrasonicSensor) < 10) {
             // Emergency stop if obstacle is too close
             Motor_SetDirection(&leftMotor, MOTOR_STOP);
             Motor_SetDirection(&rightMotor, MOTOR_STOP);
@@ -243,4 +193,6 @@ int main(void) {
             SetStatusLED(GPIO_LOW);
         }
     }
+    
+    return 0;
 }

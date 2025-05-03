@@ -8,8 +8,8 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "C:/Users/DELL/Documents/PlatformIO/Projects/Auto_Parking_Car/include",
-                "C:/Users/DELL/Documents/PlatformIO/Projects/Auto_Parking_Car/src",
+                "D:/as3b folder/8th term/embedded/project/Self-driving-Car/include",
+                "D:/as3b folder/8th term/embedded/project/Self-driving-Car/src",
                 "C:/Users/DELL/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "C:/Users/DELL/.platformio/packages/framework-arduino-avr/variants/standard",
                 "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
@@ -22,8 +22,8 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "C:/Users/DELL/Documents/PlatformIO/Projects/Auto_Parking_Car/include",
-                    "C:/Users/DELL/Documents/PlatformIO/Projects/Auto_Parking_Car/src",
+                    "D:/as3b folder/8th term/embedded/project/Self-driving-Car/include",
+                    "D:/as3b folder/8th term/embedded/project/Self-driving-Car/src",
                     "C:/Users/DELL/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "C:/Users/DELL/.platformio/packages/framework-arduino-avr/variants/standard",
                     "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
@@ -45,6 +45,10 @@
             ],
             "cStandard": "gnu11",
             "cppStandard": "gnu++11",
+            "forcedInclude": [
+                "inc/avr_registers.h",
+                ""
+            ],
             "compilerPath": "C:/Users/DELL/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
             "compilerArgs": [
                 "-mmcu=atmega328p",

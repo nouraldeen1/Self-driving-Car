@@ -1,61 +1,94 @@
-// gpio_driver.c
+// src/gpio_driver.c
 #include "../inc/gpio_driver.h"
 
-void GPIO_ClockEnable(uint32_t gpio_base) {
-    uint32_t rcc_ahb1enr = *(volatile uint32_t*)(RCC_BASE + RCC_AHB1ENR_OFFSET);
-    
-    // Determine which GPIO port to enable
-    if (gpio_base == GPIOA_BASE) {
-        rcc_ahb1enr |= (1 << 0); // GPIOA enable
-    } else if (gpio_base == GPIOB_BASE) {
-        rcc_ahb1enr |= (1 << 1); // GPIOB enable
-    } else if (gpio_base == GPIOC_BASE) {
-        rcc_ahb1enr |= (1 << 2); // GPIOC enable
-    } else if (gpio_base == GPIOD_BASE) {
-        rcc_ahb1enr |= (1 << 3); // GPIOD enable
-    } else if (gpio_base == GPIOE_BASE) {
-        rcc_ahb1enr |= (1 << 4); // GPIOE enable
+// ATmega328P Port Registers
+#define PORTB (*(volatile uint8_t*)(0x25))
+#define DDRB  (*(volatile uint8_t*)(0x24))
+#define PINB  (*(volatile uint8_t*)(0x23))
+
+#define PORTC (*(volatile uint8_t*)(0x28))
+#define DDRC  (*(volatile uint8_t*)(0x27))
+#define PINC  (*(volatile uint8_t*)(0x26))
+
+#define PORTD (*(volatile uint8_t*)(0x2B))
+#define DDRD  (*(volatile uint8_t*)(0x2A))
+#define PIND  (*(volatile uint8_t*)(0x29))
+
+// Convert Arduino pin to port and bit
+void PinToPortBit(uint8_t pin, volatile uint8_t** port, volatile uint8_t** ddr, volatile uint8_t** pin_reg, uint8_t* bit) {
+    if (pin <= 7) {
+        // Pins 0-7 map to PORTD
+        *port = &PORTD;
+        *ddr = &DDRD;
+        *pin_reg = &PIND;
+        *bit = pin;
+    } 
+    else if (pin >= 8 && pin <= 13) {
+        // Pins 8-13 map to PORTB
+        *port = &PORTB;
+        *ddr = &DDRB;
+        *pin_reg = &PINB;
+        *bit = pin - 8;
     }
+    else if (pin >= 14 && pin <= 19) {
+        // Pins 14-19 (A0-A5) map to PORTC
+        *port = &PORTC;
+        *ddr = &DDRC;
+        *pin_reg = &PINC;
+        *bit = pin - 14;
+    }
+}
+
+void GPIO_Init(uint8_t pin, GPIO_PinMode mode) {
+    volatile uint8_t* port;
+    volatile uint8_t* ddr;
+    volatile uint8_t* pin_reg;
+    uint8_t bit;
     
-    // Write back to enable the clock
-    *(volatile uint32_t*)(RCC_BASE + RCC_AHB1ENR_OFFSET) = rcc_ahb1enr;
+    PinToPortBit(pin, &port, &ddr, &pin_reg, &bit);
+    
+    switch(mode) {
+        case GPIO_INPUT:
+            // Clear bit in Data Direction Register (input)
+            *ddr &= ~(1 << bit);
+            // Clear bit in PORT (disable pull-up)
+            *port &= ~(1 << bit);
+            break;
+        case GPIO_OUTPUT:
+            // Set bit in Data Direction Register (output)
+            *ddr |= (1 << bit);
+            break;
+        case GPIO_INPUT_PULLUP:
+            // Clear bit in Data Direction Register (input)
+            *ddr &= ~(1 << bit);
+            // Set bit in PORT (enable pull-up)
+            *port |= (1 << bit);
+            break;
+    }
 }
 
-void GPIO_PinInit(uint32_t gpio_base, uint8_t pin, GPIO_PinMode mode) {
-    // Configure pin mode (input, output, etc)
-    volatile uint32_t* moder = (volatile uint32_t*)(gpio_base + GPIO_MODER_OFFSET);
-    *moder &= ~(3UL << (pin * 2)); // Clear the 2 bits for this pin
-    *moder |= (mode << (pin * 2)); // Set mode
-}
-
-void GPIO_PinWrite(uint32_t gpio_base, uint8_t pin, GPIO_PinState state) {
+void GPIO_Write(uint8_t pin, GPIO_PinState state) {
+    volatile uint8_t* port;
+    volatile uint8_t* ddr;
+    volatile uint8_t* pin_reg;
+    uint8_t bit;
+    
+    PinToPortBit(pin, &port, &ddr, &pin_reg, &bit);
+    
     if (state == GPIO_HIGH) {
-        // Set pin using BSRR (Bit Set/Reset Register)
-        *(volatile uint32_t*)(gpio_base + GPIO_BSRR_OFFSET) = (1UL << pin);
+        *port |= (1 << bit);  // Set bit to HIGH
     } else {
-        // Reset pin using BSRR
-        *(volatile uint32_t*)(gpio_base + GPIO_BSRR_OFFSET) = (1UL << (pin + 16));
+        *port &= ~(1 << bit); // Set bit to LOW
     }
 }
 
-GPIO_PinState GPIO_PinRead(uint32_t gpio_base, uint8_t pin) {
-    uint32_t idr = *(volatile uint32_t*)(gpio_base + GPIO_IDR_OFFSET);
-    return (idr & (1UL << pin)) ? GPIO_HIGH : GPIO_LOW;
-}
-
-void GPIO_PinSetAlternateFunction(uint32_t gpio_base, uint8_t pin, uint8_t alt_func) {
-    volatile uint32_t* afr;
+GPIO_PinState GPIO_Read(uint8_t pin) {
+    volatile uint8_t* port;
+    volatile uint8_t* ddr;
+    volatile uint8_t* pin_reg;
+    uint8_t bit;
     
-    if (pin < 8) {
-        afr = (volatile uint32_t*)(gpio_base + GPIO_AFRL_OFFSET);
-    } else {
-        afr = (volatile uint32_t*)(gpio_base + GPIO_AFRH_OFFSET);
-        pin -= 8;
-    }
+    PinToPortBit(pin, &port, &ddr, &pin_reg, &bit);
     
-    // Clear the 4 bits for this pin
-    *afr &= ~(0xFUL << (pin * 4));
-    
-    // Set the alternate function
-    *afr |= (alt_func << (pin * 4));
+    return (*pin_reg & (1 << bit)) ? GPIO_HIGH : GPIO_LOW;
 }

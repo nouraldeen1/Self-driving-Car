@@ -4,9 +4,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "gpio_driver.h"
 
+// IR Sensor structure
 typedef struct {
-    uint8_t pin;         // Analog or digital pin connected to IR sensor
+    uint8_t pin;         // Arduino pin number
     bool isAnalog;       // Whether the sensor outputs analog (true) or digital (false) values
     uint16_t threshold;  // Threshold value for analog sensors
 } IRSensor;

@@ -1,10 +1,11 @@
-// bluetooth_driver.h
+// inc/bluetooth_driver.h
 #ifndef BLUETOOTH_DRIVER_H
 #define BLUETOOTH_DRIVER_H
 
-#include "uart_driver.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
+#include "uart_driver.h"
 
 // Maximum command length
 #define BT_MAX_CMD_LENGTH 20
@@ -35,5 +36,9 @@ bool Bluetooth_IsCommandReceived(BluetoothModule* bt);
 Command Bluetooth_GetCommand(BluetoothModule* bt);
 void Bluetooth_SendMessage(BluetoothModule* bt, const char* message);
 void Bluetooth_ProcessReceivedData(BluetoothModule* bt, uint8_t data);
+
+// Define USART RX ISR handler
+// This doesn't implement the ISR, just declares it will be implemented elsewhere
+void USART_RX_vect_handler(void);
 
 #endif // BLUETOOTH_DRIVER_H

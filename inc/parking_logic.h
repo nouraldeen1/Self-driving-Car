@@ -21,7 +21,7 @@ typedef struct {
     uint32_t position;
 } ParkingSlot;
 
-// Function prototypes - updated for 1 ultrasonic sensor and 2 IR sensors
+// Function prototypes - for 1 ultrasonic sensor and 2 IR sensors
 bool DetectParkingSpace(UltrasonicSensor* ultrasonicSensor, IRSensor* leftIRSensor, IRSensor* rightIRSensor, ParkingSlot* slot);
 
 void ExecuteParallelParking(Motor* leftMotor, Motor* rightMotor, 

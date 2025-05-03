@@ -1,59 +1,77 @@
 // timer_driver.c
+// timer_driver.c
 #include "../inc/timer_driver.h"
-#include <Arduino.h>
+#include "../inc/avr_registers.h"
+// ATmega328P Timer Registers
+#define TCCR0A  (*(volatile uint8_t*)0x44)
+#define TCCR0B  (*(volatile uint8_t*)0x45)
+#define TCNT0   (*(volatile uint8_t*)0x46)
+#define OCR0A   (*(volatile uint8_t*)0x47)
+#define OCR0B   (*(volatile uint8_t*)0x48)
+#define TIMSK0  (*(volatile uint8_t*)0x6E)
+#define TIFR0   (*(volatile uint8_t*)0x35)
 
-// Arduino Uno timer base addresses (not used directly in Arduino framework but keeping for API compatibility)
-#define TIMER0_BASE 0x00
-#define TIMER1_BASE 0x01
-#define TIMER2_BASE 0x02
+#define TCCR1A  (*(volatile uint8_t*)0x80)
+#define TCCR1B  (*(volatile uint8_t*)0x81)
+#define TCCR1C  (*(volatile uint8_t*)0x82)
+#define TCNT1   (*(volatile uint16_t*)0x84)
+#define OCR1A   (*(volatile uint16_t*)0x88)
+#define OCR1B   (*(volatile uint16_t*)0x8A)
+#define ICR1    (*(volatile uint16_t*)0x86)
+#define TIMSK1  (*(volatile uint8_t*)0x6F)
+#define TIFR1   (*(volatile uint8_t*)0x36)
 
-// Arduino timer implementation - simplified for compatibility
+#define TCCR2A  (*(volatile uint8_t*)0xB0)
+#define TCCR2B  (*(volatile uint8_t*)0xB1)
+#define TCNT2   (*(volatile uint8_t*)0xB2)
+#define OCR2A   (*(volatile uint8_t*)0xB3)
+#define OCR2B   (*(volatile uint8_t*)0xB4)
+#define TIMSK2  (*(volatile uint8_t*)0x70)
+#define TIFR2   (*(volatile uint8_t*)0x37)
+
+// System clock is 16 MHz for Arduino Uno
+#define F_CPU 16000000UL
 
 void Timer_Init(uint32_t timer_base, uint32_t prescaler, uint32_t auto_reload) {
-    // In Arduino, we don't manipulate timer registers directly in typical applications
-    // This function serves as a compatibility layer
-
-    // For more advanced timer control, we would need direct register access:
     if (timer_base == TIMER1_BASE) {
-        // Timer1 is a 16-bit timer we could use for custom timing
-        noInterrupts(); // Disable interrupts during timer setup
-        
+        // Timer1 is 16-bit, suitable for precision timing
         // Reset Timer1 control registers
         TCCR1A = 0;
         TCCR1B = 0;
+        TCNT1 = 0;
         
-        // Set prescaler
-        // Arduino 16MHz clock / prescaler = timer clock
-        // Prescaler options: 1, 8, 64, 256, 1024
-        if (prescaler <= 1) TCCR1B |= (1 << CS10); // No prescaling
-        else if (prescaler <= 8) TCCR1B |= (1 << CS11); // /8 prescaler
-        else if (prescaler <= 64) TCCR1B |= (1 << CS11) | (1 << CS10); // /64 prescaler
-        else if (prescaler <= 256) TCCR1B |= (1 << CS12); // /256 prescaler
-        else TCCR1B |= (1 << CS12) | (1 << CS10); // /1024 prescaler
-        
-        // Set compare match value (auto reload)
-        OCR1A = auto_reload;
-        
-        // Enable CTC mode
+        // Set CTC mode (Clear Timer on Compare Match)
         TCCR1B |= (1 << WGM12);
         
-        interrupts(); // Re-enable interrupts
+        // Set prescaler based on input parameter
+        if (prescaler <= 1) {
+            TCCR1B |= (1 << CS10); // No prescaling
+        } else if (prescaler <= 8) {
+            TCCR1B |= (1 << CS11); // /8 prescaler
+        } else if (prescaler <= 64) {
+            TCCR1B |= (1 << CS11) | (1 << CS10); // /64 prescaler
+        } else if (prescaler <= 256) {
+            TCCR1B |= (1 << CS12); // /256 prescaler
+        } else {
+            TCCR1B |= (1 << CS12) | (1 << CS10); // /1024 prescaler
+        }
+        
+        // Set compare match value
+        OCR1A = auto_reload;
     }
+    // Add similar code for Timer0 and Timer2 if needed
 }
 
 void Timer_Start(uint32_t timer_base) {
     if (timer_base == TIMER1_BASE) {
         // Reset counter
         TCNT1 = 0;
-        
-        // Enable compare match interrupt if needed
-        // TIMSK1 |= (1 << OCIE1A);
     }
 }
 
 void Timer_Stop(uint32_t timer_base) {
     if (timer_base == TIMER1_BASE) {
-        // Disable all clock sources to stop the timer
+        // Stop timer by setting clock select bits to 0
         TCCR1B &= ~((1 << CS12) | (1 << CS11) | (1 << CS10));
     }
 }
@@ -81,24 +99,42 @@ void Timer_DisableInterrupt(uint32_t timer_base) {
 
 void Timer_ClearInterruptFlag(uint32_t timer_base) {
     if (timer_base == TIMER1_BASE) {
-        // Clear Timer1 compare match interrupt flag
+        // Clear Timer1 compare match interrupt flag by writing 1 to it
         TIFR1 |= (1 << OCF1A);
     }
 }
 
-void Timer_SetAutoReload(uint32_t timer_base, uint32_t auto_reload) {
-    if (timer_base == TIMER1_BASE) {
-        // Set Timer1 compare match value
-        OCR1A = auto_reload;
-    }
-}
-
-// Helper function for microsecond delays - implemented using Arduino's delayMicroseconds
+// Hardware timer-based precise delay functions
 void delay_us(uint32_t us) {
-    delayMicroseconds(us);
+    // Calculate how many clock cycles needed
+    uint32_t cycles = (F_CPU / 1000000UL) * us;
+    
+    // For very short delays, use NOPs
+    if (us < 10) {
+        for (uint32_t i = 0; i < cycles / 3; i++) {
+            asm volatile("nop");
+        }
+        return;
+    }
+    
+    // For longer delays, use Timer1
+    // Reset Timer1
+    TCCR1A = 0;
+    TCCR1B = 0;
+    TCNT1 = 0;
+    
+    // Set up timer with no prescaler
+    TCCR1B |= (1 << CS10);
+    
+    // Wait until required time has passed
+    while (TCNT1 < cycles / 4); // division by 4 because each instruction takes multiple cycles
+    
+    // Stop timer
+    TCCR1B = 0;
 }
 
-// Helper function for millisecond delays - implemented using Arduino's delay
 void delay_ms(uint32_t ms) {
-    delay(ms);
+    for (uint32_t i = 0; i < ms; i++) {
+        delay_us(1000);
+    }
 }

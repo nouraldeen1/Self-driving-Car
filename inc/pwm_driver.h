@@ -4,10 +4,17 @@
 
 #include <stdint.h>
 
-// Simple PWM channel definition for Arduino
+// ATmega328P PWM Capable Pins:
+// Pin 3:  OC2B
+// Pin 5:  OC0B
+// Pin 6:  OC0A
+// Pin 9:  OC1A
+// Pin 10: OC1B
+// Pin 11: OC2A
+
+// Simple PWM channel definition
 typedef struct {
-    uint8_t pin;         // Arduino pin number
-    uint8_t channel;     // Timer channel (if needed)
+    uint8_t pin;       // Arduino pin number (3, 5, 6, 9, 10, or 11)
 } PWM_Channel;
 
 // Function prototypes
