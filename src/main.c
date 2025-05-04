@@ -86,11 +86,84 @@ void HardwareInit(void) {
     // Blink LED to indicate initialization complete
     BlinkStatusLED(3);
 }
+// Add this to main.c after your existing functions
+void TestMotorDriver(void) {
+    // Visual indication that test is starting
+    BlinkStatusLED(3);
+    
+    // Step 1: Both motors forward for 10 seconds
+    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
+    Motor_SetSpeed(&leftMotor, 50);
+    Motor_SetSpeed(&rightMotor, 50);
+    
+    // Run for 10 seconds with LED on
+    SetStatusLED(GPIO_HIGH);
+    delay_ms(10000);
+    
+    // Brief stop with LED off
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    SetStatusLED(GPIO_LOW);
+    delay_ms(2000);
+    
+    // Step 2: Both motors backward for 10 seconds
+    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
+    Motor_SetSpeed(&leftMotor, 50);
+    Motor_SetSpeed(&rightMotor, 50);
+    
+    // Run for 10 seconds with blinking LED
+    for (int i = 0; i < 10; i++) {
+        SetStatusLED(GPIO_HIGH);
+        delay_ms(500);
+        SetStatusLED(GPIO_LOW);
+        delay_ms(500);
+    }
+    
+    // Brief stop
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    delay_ms(2000);
+    
+    // Step 3: Turn left for 10 seconds
+    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
+    Motor_SetSpeed(&leftMotor, 40);
+    Motor_SetSpeed(&rightMotor, 40);
+    
+    // Run for 10 seconds with LED on
+    SetStatusLED(GPIO_HIGH);
+    delay_ms(10000);
+    
+    // Brief stop with LED off
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    SetStatusLED(GPIO_LOW);
+    delay_ms(2000);
+    
+    // Step 4: Turn right for 10 seconds
+    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
+    Motor_SetSpeed(&leftMotor, 40);
+    Motor_SetSpeed(&rightMotor, 40);
+    
+    // Run for 10 seconds with LED on
+    SetStatusLED(GPIO_HIGH);
+    delay_ms(10000);
+    
+    // Stop motors at the end
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    
+    // Visual indication that test is complete
+    BlinkStatusLED(5);
+}
 
 int main(void) {
     // Initialize hardware
     HardwareInit();
-    
+    TestMotorDriver();
     // Send startup message
     Bluetooth_SendMessage(&bluetooth, "Self-Parking Car Ready");
     
