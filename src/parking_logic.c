@@ -43,7 +43,7 @@ bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor *ul
     Motor_SetSpeed(rightMotor, 80);
 
     // Constants for parking space detection
-    const uint32_t MIN_SLOT_WIDTH_CM = 4;       // Minimum width for parking
+    const uint32_t MIN_SLOT_WIDTH_CM = 25;       // Minimum width for parking
     const uint32_t MIN_CONSECUTIVE_READINGS = 3; // Number of consistent readings needed
     const uint32_t SAMPLING_INTERVAL_MS = 50;    // Take measurements every 50ms
 

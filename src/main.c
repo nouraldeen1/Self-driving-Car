@@ -113,13 +113,13 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
     
     // Set speed (medium speed for backward movement)
-    Motor_SetSpeed(&leftMotor, 78);
-    Motor_SetSpeed(&rightMotor, 78);
+    Motor_SetSpeed(&leftMotor, 80);
+    Motor_SetSpeed(&rightMotor, 80);
     
     // Move backward for 2 seconds
     SetStatusLED(GPIO_HIGH);
 
-    delay_ms(1000);
+    delay_ms(700);
     // Stop briefly
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
@@ -134,13 +134,13 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
     
     // Use medium speed for rotation
-    Motor_SetSpeed(&leftMotor, 80);
-    Motor_SetSpeed(&rightMotor, 80);
+    Motor_SetSpeed(&leftMotor, 150);
+    Motor_SetSpeed(&rightMotor, 150);
     
     // Rotate for approximately half a cycle (timing depends on your car)
     // Typical 180-degree rotation takes 1.5-2.5 seconds
     SetStatusLED(GPIO_HIGH);
-    delay_ms(1000); // Adjust this value based on testing
+    delay_ms(2300); // Adjust this value based on testing
     
     // Stop briefly
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
@@ -156,12 +156,12 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
     
     // Use slow speed for final positioning
-    Motor_SetSpeed(&leftMotor, 200);
-    Motor_SetSpeed(&rightMotor, 200);
+    Motor_SetSpeed(&leftMotor, 150);
+    Motor_SetSpeed(&rightMotor, 150);
     
     // Move forward slightly (short duration)
     SetStatusLED(GPIO_HIGH);
-    delay_ms(1000); // Adjust based on how far forward you want to move
+    delay_ms(2000); // Adjust based on how far forward you want to move
     
     // Stop when parking is complete
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
