@@ -68,8 +68,10 @@
   "C_Cpp_Runner.useLinkTimeOptimization": false,
   "C_Cpp_Runner.msvcSecureNoWarnings": false,
   "files.associations": {
+    "*.ejs": "html",
     "main.h": "c",
     "arduino.h": "c",
-    "pwm_driver.h": "c"
+    "pwm_driver.h": "c",
+    "interrupt.h": "c"
   }
 }

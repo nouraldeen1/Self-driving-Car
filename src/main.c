@@ -13,7 +13,14 @@
 
 // Define LED pin
 #define LED_PIN 13 // Arduino Uno onboard LED
-
+typedef enum
+{
+    START,
+    SEARCHING,  // Moving forward looking for parking space
+    ROTATING,   // Positioning for entry when space found
+    BACKING_IN, // Reversing into the parking space
+    PARKED      // Parking complete
+} ParkingState;
 // Global variables for car hardware
 Motor leftMotor, rightMotor;
 UltrasonicSensor ultrasonicSensor;
@@ -27,13 +34,15 @@ void BlinkStatusLED(uint8_t times);
 
 // UART RX interrupt handler
 
-
-void SetStatusLED(GPIO_PinState state) {
+void SetStatusLED(GPIO_PinState state)
+{
     GPIO_Write(LED_PIN, state);
 }
 
-void BlinkStatusLED(uint8_t times) {
-    for (uint8_t i = 0; i < times; i++) {
+void BlinkStatusLED(uint8_t times)
+{
+    for (uint8_t i = 0; i < times; i++)
+    {
         GPIO_Write(LED_PIN, GPIO_HIGH);
         delay_ms(200);
         GPIO_Write(LED_PIN, GPIO_LOW);
@@ -41,231 +50,190 @@ void BlinkStatusLED(uint8_t times) {
     }
 }
 
-void HardwareInit(void) {
+void HardwareInit(void)
+{
     // Initialize LED pin
     GPIO_Init(LED_PIN, GPIO_OUTPUT);
     GPIO_Write(LED_PIN, GPIO_LOW);
-    
+
     // Configure left motor
     leftMotor.in1_pin = 2;
     leftMotor.in2_pin = 3;
-    leftMotor.ena_pin = 5;  // PWM pin
+    leftMotor.ena_pin = 5; // PWM pin
     Motor_Init(&leftMotor);
-    
+
     // Configure right motor
     rightMotor.in1_pin = 4;
     rightMotor.in2_pin = 7;
-    rightMotor.ena_pin = 6;  // PWM pin
+    rightMotor.ena_pin = 6; // PWM pin
     Motor_Init(&rightMotor);
-    
+
     // Configure ultrasonic sensor
     ultrasonicSensor.trig_pin = 8;
     ultrasonicSensor.echo_pin = 9;
     Ultrasonic_Init(&ultrasonicSensor);
-    
+
     // Configure IR sensors
-    leftIRSensor.pin = 14;  // A0
+    leftIRSensor.pin = 14; // A0
     leftIRSensor.isAnalog = true;
     leftIRSensor.threshold = 500;
     IR_Init(&leftIRSensor);
-    
-    rightIRSensor.pin = 15;  // A1
+
+    rightIRSensor.pin = 15; // A1
     rightIRSensor.isAnalog = true;
     rightIRSensor.threshold = 500;
     IR_Init(&rightIRSensor);
-    
+
     // Initialize Bluetooth (HC-05)
     bluetooth.uart.tx_pin = 1;
     bluetooth.uart.rx_pin = 0;
     bluetooth.uart.baud_rate = UART_BAUD_9600;
     Bluetooth_Init(&bluetooth);
-    
+
     // Enable global interrupts
     sei();
-    
+
     // Blink LED to indicate initialization complete
     BlinkStatusLED(3);
 }
 // Add this to main.c after your existing functions
-void TestMotorDriver(void) {
-    // Visual indication that test is starting
+void ParkBaby(void)
+{
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    // Visual indication that parking is starting
     BlinkStatusLED(3);
+    Bluetooth_SendMessage(&bluetooth, "Starting parking maneuver...");
     
-    // Step 1: Both motors forward for 10 seconds
-    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
-    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-    Motor_SetSpeed(&leftMotor, 50);
-    Motor_SetSpeed(&rightMotor, 50);
+    // Step 1: Move backward to position the car
+    Bluetooth_SendMessage(&bluetooth, "Step 1: Moving backward");
     
-    // Run for 10 seconds with LED on
-    SetStatusLED(GPIO_HIGH);
-    delay_ms(10000);
-    
-    // Brief stop with LED off
-    Motor_SetDirection(&leftMotor, MOTOR_STOP);
-    Motor_SetDirection(&rightMotor, MOTOR_STOP);
-    SetStatusLED(GPIO_LOW);
-    delay_ms(2000);
-    
-    // Step 2: Both motors backward for 10 seconds
+    // Set motor directions for backward movement
     Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
     Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
-    Motor_SetSpeed(&leftMotor, 50);
-    Motor_SetSpeed(&rightMotor, 50);
     
-    // Run for 10 seconds with blinking LED
-    for (int i = 0; i < 10; i++) {
-        SetStatusLED(GPIO_HIGH);
-        delay_ms(500);
-        SetStatusLED(GPIO_LOW);
-        delay_ms(500);
-    }
+    // Set speed (medium speed for backward movement)
+    Motor_SetSpeed(&leftMotor, 78);
+    Motor_SetSpeed(&rightMotor, 78);
     
-    // Brief stop
-    Motor_SetDirection(&leftMotor, MOTOR_STOP);
-    Motor_SetDirection(&rightMotor, MOTOR_STOP);
-    delay_ms(2000);
-    
-    // Step 3: Turn left for 10 seconds
-    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
-    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-    Motor_SetSpeed(&leftMotor, 40);
-    Motor_SetSpeed(&rightMotor, 40);
-    
-    // Run for 10 seconds with LED on
+    // Move backward for 2 seconds
     SetStatusLED(GPIO_HIGH);
-    delay_ms(10000);
-    
-    // Brief stop with LED off
-    Motor_SetDirection(&leftMotor, MOTOR_STOP);
-    Motor_SetDirection(&rightMotor, MOTOR_STOP);
-    SetStatusLED(GPIO_LOW);
-    delay_ms(2000);
-    
-    // Step 4: Turn right for 10 seconds
-    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
-    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
-    Motor_SetSpeed(&leftMotor, 40);
-    Motor_SetSpeed(&rightMotor, 40);
-    
-    // Run for 10 seconds with LED on
-    SetStatusLED(GPIO_HIGH);
-    delay_ms(10000);
-    
-    // Stop motors at the end
-    Motor_SetDirection(&leftMotor, MOTOR_STOP);
-    Motor_SetDirection(&rightMotor, MOTOR_STOP);
-    
-    // Visual indication that test is complete
-    BlinkStatusLED(5);
-}
 
-int main(void) {
+    delay_ms(1000);
+    // Stop briefly
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    SetStatusLED(GPIO_LOW);
+    delay_ms(5000);
+    
+    // Step 2: Rotate half cycle (180 degrees)
+    Bluetooth_SendMessage(&bluetooth, "Step 2: Rotating half cycle");
+    
+    // Set directions for rotation (one motor forward, one backward)
+    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
+    
+    // Use medium speed for rotation
+    Motor_SetSpeed(&leftMotor, 80);
+    Motor_SetSpeed(&rightMotor, 80);
+    
+    // Rotate for approximately half a cycle (timing depends on your car)
+    // Typical 180-degree rotation takes 1.5-2.5 seconds
+    SetStatusLED(GPIO_HIGH);
+    delay_ms(1000); // Adjust this value based on testing
+    
+    // Stop briefly
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    SetStatusLED(GPIO_LOW);
+    delay_ms(5000);
+    
+    // Step 3: Move a little forward to finish parking
+    Bluetooth_SendMessage(&bluetooth, "Step 3: Final adjustment forward");
+    
+    // Set directions for forward movement
+    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
+    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
+    
+    // Use slow speed for final positioning
+    Motor_SetSpeed(&leftMotor, 200);
+    Motor_SetSpeed(&rightMotor, 200);
+    
+    // Move forward slightly (short duration)
+    SetStatusLED(GPIO_HIGH);
+    delay_ms(1000); // Adjust based on how far forward you want to move
+    
+    // Stop when parking is complete
+    Motor_SetDirection(&leftMotor, MOTOR_STOP);
+    Motor_SetDirection(&rightMotor, MOTOR_STOP);
+    SetStatusLED(GPIO_LOW);
+    
+    // // Visual indication that parking is complete
+    // BlinkStatusLED(5);
+    Bluetooth_SendMessage(&bluetooth, "Parking complete!");
+}
+// Simple serial data reading function with blocking behavior
+Command CheckForCommand(void)
+{
+    // This will wait until data is received from the bluetooth module
+    uint8_t data = UART_Receive();
+
+    // Process the received data
+    if (data == '0')
+    {
+        // Send response
+        Bluetooth_SendMessage(&bluetooth, "Zero");
+    }
+    else if (data == '1')
+    {
+        // Send response
+        Bluetooth_SendMessage(&bluetooth, "One");
+        return COMMAND_START_PARKING;
+    }
+
+    return COMMAND_NONE;
+}
+int main(void)
+{
     // Initialize hardware
     HardwareInit();
-    TestMotorDriver();
-    // Send startup message
-    Bluetooth_SendMessage(&bluetooth, "Self-Parking Car Ready");
-    
+
+    // Define parking state variables
+
+    ParkingSlot detectedSlot;
+  
+
+    // Send startup message and indication
+    BlinkStatusLED(2);
+
     // Main loop
-    while (1) {
-        // Check for Bluetooth commands
-        if (Bluetooth_IsCommandReceived(&bluetooth)) {
-            Command cmd = Bluetooth_GetCommand(&bluetooth);
-            
-            switch (cmd) {
-                case COMMAND_START_PARKING:
-                    // Blink LED to indicate parking process starts
-                    BlinkStatusLED(2);
-                    
-                    // Start the parking sequence
-                    ParkingSlot slot;
-                    
-                    // Move forward and detect parking space
-                    Bluetooth_SendMessage(&bluetooth, "Scanning for parking space...");
-                    if (DetectParkingSpace(&ultrasonicSensor, &leftIRSensor, &rightIRSensor, &slot)) {
-                        // Execute parking maneuver based on detected slot
-                        if (slot.type == PARALLEL_PARKING) {
-                            Bluetooth_SendMessage(&bluetooth, "Parallel parking slot detected");
-                            ExecuteParallelParking(&leftMotor, &rightMotor, 
-                                                &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
-                        } else {
-                            Bluetooth_SendMessage(&bluetooth, "Perpendicular parking slot detected");
-                            ExecutePerpendicularParking(&leftMotor, &rightMotor,
-                                                    &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
-                        }
-                        
-                        // Send completion status via Bluetooth
-                        Bluetooth_SendMessage(&bluetooth, "Parking completed");
-                        BlinkStatusLED(4); // Signal successful parking
-                    } else {
-                        // No suitable parking space found
-                        Bluetooth_SendMessage(&bluetooth, "No parking space found");
-                        BlinkStatusLED(1); // Signal failure
-                    }
+    while (1)
+    {
+        Command cmd = CheckForCommand();
+
+        // Process commands
+        if (cmd == COMMAND_START_PARKING)
+        {
+            Bluetooth_SendMessage(&bluetooth, "lets go!");
+            while (1)
+            {
+                // Here you would add your parking logic code
+                // ParkingLogic_StartParking(&leftMotor, &rightMotor, &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
+                // State machine for parking logic
+
+                // Check for parking space
+                if (DetectParkingSpace(&leftMotor, &rightMotor, &ultrasonicSensor, &leftIRSensor, &rightIRSensor, &detectedSlot))
+                {
+                    // Space found, transition to next state
+                    ParkBaby();
+                    BlinkStatusLED(2); // Visual indication of state change
                     break;
-                    
-                case COMMAND_STOP:
-                    // Emergency stop
-                    Motor_SetDirection(&leftMotor, MOTOR_STOP);
-                    Motor_SetDirection(&rightMotor, MOTOR_STOP);
-                    Bluetooth_SendMessage(&bluetooth, "Emergency stop");
-                    break;
-                    
-                case COMMAND_MOVE_FORWARD:
-                    // Manual forward control
-                    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
-                    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-                    Motor_SetSpeed(&leftMotor, 50);
-                    Motor_SetSpeed(&rightMotor, 50);
-                    Bluetooth_SendMessage(&bluetooth, "Moving forward");
-                    break;
-                    
-                case COMMAND_MOVE_BACKWARD:
-                    // Manual backward control
-                    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
-                    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
-                    Motor_SetSpeed(&leftMotor, 50);
-                    Motor_SetSpeed(&rightMotor, 50);
-                    Bluetooth_SendMessage(&bluetooth, "Moving backward");
-                    break;
-                    
-                case COMMAND_TURN_LEFT:
-                    // Manual left turn
-                    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
-                    Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-                    Motor_SetSpeed(&leftMotor, 40);
-                    Motor_SetSpeed(&rightMotor, 40);
-                    Bluetooth_SendMessage(&bluetooth, "Turning left");
-                    break;
-                    
-                case COMMAND_TURN_RIGHT:
-                    // Manual right turn
-                    Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
-                    Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
-                    Motor_SetSpeed(&leftMotor, 40);
-                    Motor_SetSpeed(&rightMotor, 40);
-                    Bluetooth_SendMessage(&bluetooth, "Turning right");
-                    break;
-                    
-                default:
-                    break;
+                }
             }
         }
-        
-        // Obstacle detection - safety feature
-        if (Ultrasonic_MeasureDistance(&ultrasonicSensor) < 10) {
-            // Emergency stop if obstacle is too close
-            Motor_SetDirection(&leftMotor, MOTOR_STOP);
-            Motor_SetDirection(&rightMotor, MOTOR_STOP);
-            // Add notification about emergency stop
-            Bluetooth_SendMessage(&bluetooth, "Emergency stop: Obstacle detected");
-            // Visual indicator
-            SetStatusLED(GPIO_HIGH);
-            delay_ms(500);
-            SetStatusLED(GPIO_LOW);
-        }
+        // Small delay to prevent CPU hogging
+        delay_ms(100);
     }
-    
+
     return 0;
 }

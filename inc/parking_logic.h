@@ -22,7 +22,7 @@ typedef struct {
 } ParkingSlot;
 
 // Function prototypes - for 1 ultrasonic sensor and 2 IR sensors
-bool DetectParkingSpace(UltrasonicSensor* ultrasonicSensor, IRSensor* leftIRSensor, IRSensor* rightIRSensor, ParkingSlot* slot);
+bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor* ultrasonicSensor, IRSensor* leftIRSensor, IRSensor* rightIRSensor, ParkingSlot* slot);
 
 void ExecuteParallelParking(Motor* leftMotor, Motor* rightMotor, 
                           UltrasonicSensor* ultrasonicSensor, 
@@ -33,5 +33,5 @@ void ExecutePerpendicularParking(Motor* leftMotor, Motor* rightMotor,
                                UltrasonicSensor* ultrasonicSensor, 
                                IRSensor* leftIRSensor, 
                                IRSensor* rightIRSensor);
-
+void MoveVerySlowly(Motor* leftMotor, Motor* rightMotor, MotorDirection direction);
 #endif // PARKING_LOGIC_H

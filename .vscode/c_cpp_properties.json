@@ -8,29 +8,29 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "D:/as3b folder/8th term/embedded/project/Self-driving-Car/include",
-                "D:/as3b folder/8th term/embedded/project/Self-driving-Car/src",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/cores/arduino",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/variants/standard",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/HID/src",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                "C:/Users/Ali/Desktop/Self-driving-Car/include",
+                "C:/Users/Ali/Desktop/Self-driving-Car/src",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/variants/standard",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                 ""
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "D:/as3b folder/8th term/embedded/project/Self-driving-Car/include",
-                    "D:/as3b folder/8th term/embedded/project/Self-driving-Car/src",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/cores/arduino",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/variants/standard",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/HID/src",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
-                    "C:/Users/DELL/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    "C:/Users/Ali/Desktop/Self-driving-Car/include",
+                    "C:/Users/Ali/Desktop/Self-driving-Car/src",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/variants/standard",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    "C:/Users/Ali/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
                     ""
                 ]
             },
@@ -49,7 +49,7 @@
                 "inc/avr_registers.h",
                 ""
             ],
-            "compilerPath": "C:/Users/DELL/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerPath": "C:/Users/Ali/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
             "compilerArgs": [
                 "-mmcu=atmega328p",
                 ""

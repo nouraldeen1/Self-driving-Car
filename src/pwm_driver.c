@@ -107,7 +107,7 @@ void PWM_SetDutyCycle(PWM_Channel* pwm, uint8_t duty_cycle) {
     }
     
     // Convert percentage to PWM value (0-255)
-    uint8_t pwm_value = (duty_cycle * 255) / 100;
+    uint8_t pwm_value = (duty_cycle * 255)/100;
     
     // Set PWM value based on pin
     switch(pwm->pin) {
