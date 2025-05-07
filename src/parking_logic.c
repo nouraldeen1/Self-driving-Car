@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define LED_PIN 13 // Arduino Uno onboard LED
+
+#define LED_PIN 19 // Arduino Uno onboard LED
 // External function for delay
 extern void delay_ms(uint32_t ms);
 // External motor references
@@ -13,8 +14,6 @@ void MoveVerySlowly(Motor *leftMotor, Motor *rightMotor, MotorDirection directio
 {
     // Constants for very slow movement
     const uint8_t VERY_SLOW_SPEED = 13; // Using a low PWM value for slow movement
-    const uint16_t RAMP_DELAY_MS = 300;  // Time between speed increments for smooth start
-
     // Set motor directions
     Motor_SetDirection(leftMotor, direction);
     Motor_SetDirection(rightMotor, direction);
@@ -31,7 +30,7 @@ void MoveVerySlowly(Motor *leftMotor, Motor *rightMotor, MotorDirection directio
         delay_ms(1000);
     }
 }
-bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor *ultrasonicSensor, IRSensor *leftIRSensor, IRSensor *rightIRSensor, ParkingSlot *slot)
+  DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor *rearLeftUtrasonicSensor, UltrasonicSensor* frontLeftUltrasonicSensor,UltrasonicSensor* frontRightUltrasonicSensor, UltrasonicSensor* rearRightUltrasonicSensor,IRSensor *IRSensor, ParkingSlot *slot)
 {
     //Move a little bit forward to get a reading for other potential slot
     // Set motor directions
@@ -39,49 +38,73 @@ bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor *ul
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
 
     // Start with motors stopped
-    Motor_SetSpeed(leftMotor, 80);
-    Motor_SetSpeed(rightMotor, 80);
+    Motor_SetSpeed(leftMotor, 78);
+    Motor_SetSpeed(rightMotor, 78);
 
     // Constants for parking space detection
     const uint32_t MIN_SLOT_WIDTH_CM = 25;       // Minimum width for parking
+    const uint32_t MIN_SLOT_WIDTH_REAR = 30;      // Minimum length for parking
     const uint32_t MIN_CONSECUTIVE_READINGS = 3; // Number of consistent readings needed
     const uint32_t SAMPLING_INTERVAL_MS = 50;    // Take measurements every 50ms
 
     // Local variables
-    uint32_t consecutiveValidReadings = 0;
+    uint32_t consecutiveValidReadingsRight = 0;
+    uint32_t consecutiveValidReadingsLeft = 0;
+
     bool spaceDetected = false;
+    Direction parkingDirection = LEFT; // Default direction to left
 
     // Take several readings to ensure consistency and filter noise
     for (uint8_t i = 0; i < MIN_CONSECUTIVE_READINGS; i++)
     {
         // Get sensor readings
-        bool leftClear = !IR_DetectObstacle(leftIRSensor);   // Rear sensor
-        bool rightClear = !IR_DetectObstacle(rightIRSensor); // Front sensor
-        uint32_t middleDistance = Ultrasonic_MeasureDistance(ultrasonicSensor);
-        bool middleClear = (middleDistance >= MIN_SLOT_WIDTH_CM);
+        
+        bool frontClear = IR_DetectObstacle(IRSensor);
+        bool rearLeftClear = Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor) >= MIN_SLOT_WIDTH_REAR;
+        bool rearRightClear = Ultrasonic_MeasureDistance(rearRightUltrasonicSensor) >= MIN_SLOT_WIDTH_REAR;
+        bool frontLeftClear = Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
+        bool frontRightClear = Ultrasonic_MeasureDistance(frontRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
 
-        // Condition 1: All three sensors detect no obstacle
-        // Condition 2: Middle and rear sensors detect no obstacle
-        if ((leftClear && middleClear && rightClear) ||
-            (leftClear && middleClear))
-        {
-            consecutiveValidReadings++;
+
+    
+        
+
+        if (!frontClear){
+
+
+            Motor_SetDirection(leftMotor, MOTOR_STOP);
+            Motor_SetDirection(rightMotor, MOTOR_STOP);
+
+            DetectParkingSpaceReturn result = {LEFT, false};
+            return result;
         }
-        else
-        {
-            // Reset the counter if any reading is invalid
-            consecutiveValidReadings = 0;
 
-            // Early exit - no need to continue checking
+
+        if (rearRightClear && frontRightClear )
+        {
+            consecutiveValidReadingsRight++;
+        }else{
+            // Reset the counter if any reading is invalid
+            consecutiveValidReadingsRight = 0;
             break;
         }
+
+        if (rearLeftClear && frontLeftClear )
+        {
+            consecutiveValidReadingsLeft++;
+        }else{
+            // Reset the counter if any reading is invalid
+            consecutiveValidReadingsLeft = 0;
+            break;
+        }
+        
 
         // Wait before next sampling
         delay_ms(SAMPLING_INTERVAL_MS);
     }
 
     // If we have enough consecutive valid readings, we've found a space
-    if (consecutiveValidReadings >= MIN_CONSECUTIVE_READINGS)
+    if (consecutiveValidReadingsRight >= MIN_CONSECUTIVE_READINGS)
     {
             // Start with motors stopped
         Motor_SetSpeed(leftMotor, 0);
@@ -89,10 +112,20 @@ bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor *ul
         Motor_SetDirection(leftMotor, MOTOR_STOP);
         Motor_SetDirection(rightMotor, MOTOR_STOP);
         spaceDetected = true;
+        parkingDirection = RIGHT;
+    } else if (consecutiveValidReadingsLeft >= MIN_CONSECUTIVE_READINGS)
+    {
+            // Start with motors stopped
+        Motor_SetSpeed(leftMotor, 0);
+        Motor_SetSpeed(rightMotor, 0);
+        Motor_SetDirection(leftMotor, MOTOR_STOP);
+        Motor_SetDirection(rightMotor, MOTOR_STOP);
+        spaceDetected = true;
+        parkingDirection = LEFT;
     }
 
 
-    return spaceDetected;
+    DetectParkingSpaceReturn result = {parkingDirection, spaceDetected};
 }
 
 void ExecutePerpendicularParking(Motor *leftMotor, Motor *rightMotor,

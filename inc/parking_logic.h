@@ -21,8 +21,18 @@ typedef struct {
     uint32_t position;
 } ParkingSlot;
 
+typedef enum {
+    LEFT,
+    RIGHT
+} Direction;
+
+typedef struct {
+    Direction direction; // Direction of the parking slot (left or right)
+    bool detected;
+}DetectParkingSpaceReturn;
+
 // Function prototypes - for 1 ultrasonic sensor and 2 IR sensors
-bool DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor* ultrasonicSensor, IRSensor* leftIRSensor, IRSensor* rightIRSensor, ParkingSlot* slot);
+DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor* , UltrasonicSensor*, UltrasonicSensor*,UltrasonicSensor*,  IRSensor* rightIRSensor, ParkingSlot* slot);
 
 void ExecuteParallelParking(Motor* leftMotor, Motor* rightMotor, 
                           UltrasonicSensor* ultrasonicSensor, 

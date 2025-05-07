@@ -31,9 +31,9 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "C:/Users/basim/Desktop/hho/.pio/build/uno/firmware.elf",
+            "executable": "C:/Users/Ali/Desktop/Self-driving-Car/.pio/build/uno/firmware.elf",
             "projectEnvName": "uno",
-            "toolchainBinDir": "C:/Users/basim/.platformio/packages/toolchain-atmelavr/bin",
+            "toolchainBinDir": "C:/Users/Ali/.platformio/packages/toolchain-atmelavr/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -44,18 +44,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "C:/Users/basim/Desktop/hho/.pio/build/uno/firmware.elf",
+            "executable": "C:/Users/Ali/Desktop/Self-driving-Car/.pio/build/uno/firmware.elf",
             "projectEnvName": "uno",
-            "toolchainBinDir": "C:/Users/basim/.platformio/packages/toolchain-atmelavr/bin",
+            "toolchainBinDir": "C:/Users/Ali/.platformio/packages/toolchain-atmelavr/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "C:/Users/basim/Desktop/hho/.pio/build/uno/firmware.elf",
+            "executable": "C:/Users/Ali/Desktop/Self-driving-Car/.pio/build/uno/firmware.elf",
             "projectEnvName": "uno",
-            "toolchainBinDir": "C:/Users/basim/.platformio/packages/toolchain-atmelavr/bin",
+            "toolchainBinDir": "C:/Users/Ali/.platformio/packages/toolchain-atmelavr/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }

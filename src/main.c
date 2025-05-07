@@ -12,7 +12,13 @@
 #include "../inc/parking_logic.h"
 
 // Define LED pin
-#define LED_PIN 13 // Arduino Uno onboard LED
+#define LED_PIN 19 // Arduino Uno onboard LED
+#define A0 14
+#define A1 15
+#define A2 16
+#define A3 17
+#define A4 18
+#define A5 19
 typedef enum
 {
     START,
@@ -23,7 +29,7 @@ typedef enum
 } ParkingState;
 // Global variables for car hardware
 Motor leftMotor, rightMotor;
-UltrasonicSensor ultrasonicSensor;
+UltrasonicSensor rearLeftUltrasonicSensor,rearRightUltrasonicSensor,frontLeftUltrasonicSensor,frontRightUltrasonicSensor, rearRightUltrasonicSensor;
 IRSensor leftIRSensor, rightIRSensor;
 BluetoothModule bluetooth;
 
@@ -69,15 +75,20 @@ void HardwareInit(void)
     Motor_Init(&rightMotor);
 
     // Configure ultrasonic sensor
-    ultrasonicSensor.trig_pin = 8;
-    ultrasonicSensor.echo_pin = 9;
-    Ultrasonic_Init(&ultrasonicSensor);
+    frontRightUltrasonicSensor.trig_pin = 8;
+    frontRightUltrasonicSensor.echo_pin = 9;
+    Ultrasonic_Init(&frontRightUltrasonicSensor);
+    rearRightUltrasonicSensor.trig_pin = 10;
+    rearRightUltrasonicSensor.echo_pin = 11;
+    Ultrasonic_Init(&rearRightUltrasonicSensor);
 
+    frontLeftUltrasonicSensor.trig_pin = 12;
+    frontLeftUltrasonicSensor.echo_pin = 13;
+    Ultrasonic_Init(&frontLeftUltrasonicSensor);
+    rearLeftUltrasonicSensor.trig_pin = 18;
+    rearLeftUltrasonicSensor.echo_pin = 17;
+    Ultrasonic_Init(&rearLeftUltrasonicSensor);
     // Configure IR sensors
-    leftIRSensor.pin = 14; // A0
-    leftIRSensor.isAnalog = true;
-    leftIRSensor.threshold = 500;
-    IR_Init(&leftIRSensor);
 
     rightIRSensor.pin = 15; // A1
     rightIRSensor.isAnalog = true;
@@ -94,7 +105,7 @@ void HardwareInit(void)
     sei();
 
     // Blink LED to indicate initialization complete
-    BlinkStatusLED(3);
+    //BlinkStatusLED(3);
 }
 // Add this to main.c after your existing functions
 void ParkBaby(void)
@@ -102,7 +113,7 @@ void ParkBaby(void)
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
     // Visual indication that parking is starting
-    BlinkStatusLED(3);
+    
     Bluetooth_SendMessage(&bluetooth, "Starting parking maneuver...");
     
     // Step 1: Move backward to position the car
@@ -119,7 +130,7 @@ void ParkBaby(void)
     // Move backward for 2 seconds
     SetStatusLED(GPIO_HIGH);
 
-    delay_ms(700);
+    delay_ms(600);
     // Stop briefly
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
@@ -134,13 +145,13 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_BACKWARD);
     
     // Use medium speed for rotation
-    Motor_SetSpeed(&leftMotor, 150);
-    Motor_SetSpeed(&rightMotor, 150);
+    Motor_SetSpeed(&leftMotor, 100);
+    Motor_SetSpeed(&rightMotor, 100);
     
     // Rotate for approximately half a cycle (timing depends on your car)
     // Typical 180-degree rotation takes 1.5-2.5 seconds
-    SetStatusLED(GPIO_HIGH);
-    delay_ms(2300); // Adjust this value based on testing
+   // SetStatusLED(GPIO_HIGH);
+    delay_ms(2500); // Adjust this value based on testing
     
     // Stop briefly
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
@@ -156,12 +167,12 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
     
     // Use slow speed for final positioning
-    Motor_SetSpeed(&leftMotor, 150);
-    Motor_SetSpeed(&rightMotor, 150);
+    Motor_SetSpeed(&leftMotor, 100);
+    Motor_SetSpeed(&rightMotor, 100);
     
     // Move forward slightly (short duration)
-    SetStatusLED(GPIO_HIGH);
-    delay_ms(2000); // Adjust based on how far forward you want to move
+    //SetStatusLED(GPIO_HIGH);
+    delay_ms(1700); // Adjust based on how far forward you want to move
     
     // Stop when parking is complete
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
@@ -171,6 +182,8 @@ void ParkBaby(void)
     // // Visual indication that parking is complete
     // BlinkStatusLED(5);
     Bluetooth_SendMessage(&bluetooth, "Parking complete!");
+    SetStatusLED(GPIO_HIGH);
+    BlinkStatusLED(3);
 }
 // Simple serial data reading function with blocking behavior
 Command CheckForCommand(void)
@@ -197,10 +210,10 @@ int main(void)
 {
     // Initialize hardware
     HardwareInit();
-
     // Define parking state variables
 
     ParkingSlot detectedSlot;
+
   
 
     // Send startup message and indication
@@ -210,7 +223,10 @@ int main(void)
     while (1)
     {
         Command cmd = CheckForCommand();
-
+        // if(Ultrasonic_MeasureDistance(&frontRightUltrasonicSensor) <= 25)
+        // {
+        //     BlinkStatusLED(3);
+        // }
         // Process commands
         if (cmd == COMMAND_START_PARKING)
         {
@@ -218,11 +234,13 @@ int main(void)
             while (1)
             {
                 // Here you would add your parking logic code
-                // ParkingLogic_StartParking(&leftMotor, &rightMotor, &ultrasonicSensor, &leftIRSensor, &rightIRSensor);
+                // ParkingLogic_StartParking(&leftMotor, &rightMotor, &frontRightUltrasonicSensor, &leftIRSensor, &rightIRSensor);
                 // State machine for parking logic
 
+                DetectParkingSpaceReturn detectedSlot = DetectParkingSpace(&leftMotor, &rightMotor, &rearLeftUltrasonicSensor, &frontLeftUltrasonicSensor, &frontRightUltrasonicSensor, &rearRightUltrasonicSensor, &rightIRSensor, &detectedSlot);
+
                 // Check for parking space
-                if (DetectParkingSpace(&leftMotor, &rightMotor, &ultrasonicSensor, &leftIRSensor, &rightIRSensor, &detectedSlot))
+                if (detectedSlot.detected)
                 {
                     // Space found, transition to next state
                     ParkBaby();
