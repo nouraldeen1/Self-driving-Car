@@ -38,8 +38,8 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
                                            IRSensor *IRSensor, ParkingSlot *slot)
 {
     // Set motors to move forward
-    Motor_SetSpeed(leftMotor, 70);
-    Motor_SetSpeed(rightMotor, 70);
+    Motor_SetSpeed(leftMotor, 65);
+    Motor_SetSpeed(rightMotor, 65);
     Motor_SetDirection(leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
 

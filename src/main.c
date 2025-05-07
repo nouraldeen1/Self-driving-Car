@@ -233,18 +233,18 @@ void ParkBabyRight(void)
 
     // Check for obstacles while turning
     elapsed_time = 0;
-    target_time = 1000;
+    target_time = 1800;
 
     while (elapsed_time < target_time)
     {
-        if (CheckForObstacle())
-        {
-            Motor_SetDirection(&leftMotor, MOTOR_STOP);
-            Motor_SetDirection(&rightMotor, MOTOR_STOP);
-            Bluetooth_SendMessage(&bluetooth, "OBSTACLE DETECTED! Stopping.");
-            BlinkStatusLED(5);
-            return;
-        }
+        // if (CheckForObstacle())
+        // {
+        //     Motor_SetDirection(&leftMotor, MOTOR_STOP);
+        //     Motor_SetDirection(&rightMotor, MOTOR_STOP);
+        //     Bluetooth_SendMessage(&bluetooth, "OBSTACLE DETECTED! Stopping.");
+        //     BlinkStatusLED(5);
+        //     return;
+        // }
         delay_ms(check_interval);
         elapsed_time += check_interval;
     }
@@ -285,7 +285,7 @@ void ParkBabyRight(void)
     delay_ms(1000);
 
     Bluetooth_SendMessage(&bluetooth, "Right-side parking complete!");
-    BlinkStatusLED(2);
+    SetStatusLED(GPIO_HIGH);;
 }
 // Left-side parking maneuver with obstacle detection
 void ParkBabyLeft(void)
