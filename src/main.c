@@ -102,8 +102,8 @@ void HardwareInit(void)
     rearRightUltrasonicSensor.echo_pin = 11;
     Ultrasonic_Init(&rearRightUltrasonicSensor);
 
-    frontLeftUltrasonicSensor.trig_pin = 12;
-    frontLeftUltrasonicSensor.echo_pin = 13;
+    frontLeftUltrasonicSensor.trig_pin = 16;
+    frontLeftUltrasonicSensor.echo_pin = 14;
     Ultrasonic_Init(&frontLeftUltrasonicSensor);
     rearLeftUltrasonicSensor.trig_pin = 18;
     rearLeftUltrasonicSensor.echo_pin = 17;
@@ -307,9 +307,9 @@ void ParkBabyLeft(void)
     delay_ms(1000);
 
     // Step 2: Turn right to begin parking
-    Bluetooth_SendMessage(&bluetooth, "Step 2: Turning Left");
+    Bluetooth_SendMessage(&bluetooth, "Step 2: Turning left");
     Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
-    Motor_SetDirection(&rightMotor,  MOTOR_FORWARD );
+    Motor_SetDirection(&rightMotor, MOTOR_FORWARD );
     Motor_SetSpeed(&leftMotor, 80);
     Motor_SetSpeed(&rightMotor, 80);
 
@@ -366,7 +366,7 @@ void ParkBabyLeft(void)
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
     delay_ms(1000);
 
-    Bluetooth_SendMessage(&bluetooth, "Left-side parking complete!");
+    Bluetooth_SendMessage(&bluetooth, "Right-side parking complete!");
     SetStatusLED(GPIO_HIGH);
 }
 // Simple serial data reading function with blocking behavior

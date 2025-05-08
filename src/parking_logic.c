@@ -44,7 +44,7 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
 
     // Constants
-    const uint32_t MIN_SLOT_WIDTH_CM = 20;
+    const uint32_t MIN_SLOT_WIDTH_CM = 15;
     const uint8_t REQUIRED_CONFIRMATIONS = 1;
     const uint32_t DELAY_BETWEEN_READINGS = 100; // ms
 
@@ -56,11 +56,11 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
         bool frontLeftClear = Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
         bool rearRightClear = Ultrasonic_MeasureDistance(rearRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
         bool frontRightClear = Ultrasonic_MeasureDistance(frontRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
-        // char debug_msg[50];
-        // sprintf(debug_msg, "Left braa: R=%d, F=%d",
-        //         (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
-        //         (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
-        // Bluetooth_SendMessage(&bluetooth, debug_msg);
+        char debug_msg[50];
+        sprintf(debug_msg, "Lb: R=%d, F=%d",
+                (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+        Bluetooth_SendMessage(&bluetooth, debug_msg);
         // Check for left side parking space
            // Check for right side parking space
            if (rearLeftClear && frontLeftClear)
@@ -77,11 +77,11 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
 
                    if (rearLeftClear && frontLeftClear)
                    {
-                    // char debug_msg[50];
-                    // sprintf(debug_msg, "CL: R=%d, F=%d",
-                    //         (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
-                    //         (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
-                    // Bluetooth_SendMessage(&bluetooth, debug_msg);
+                    char debug_msg[50];
+                    sprintf(debug_msg, "CL: R=%d, F=%d",
+                            (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                            (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+                    Bluetooth_SendMessage(&bluetooth, debug_msg);
                        confirmations++;
                        if (confirmations >= REQUIRED_CONFIRMATIONS)
                        {
