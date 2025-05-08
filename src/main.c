@@ -315,7 +315,7 @@ void ParkBabyLeft(void)
 
     // Check for obstacles while turning
     elapsed_time = 0;
-    target_time = 1800;
+    target_time = 1600;
 
     while (elapsed_time < target_time)
     {

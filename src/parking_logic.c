@@ -51,6 +51,21 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
     // Check for parking spaces
     for (int i = 0; i < NUMBER_oF_ITERATIONS; i++)
     {
+             // Check for obstacles using IR sensor to avoid collision
+        if (IR_DetectObstacle(IRSensor))
+        {
+            // Obstacle detected, stop motors immediately
+            Motor_SetSpeed(leftMotor, 0);
+            Motor_SetSpeed(rightMotor, 0);
+            
+            // Send debug message about obstacle detection
+            Bluetooth_SendMessage(bluetooth, "Obstacle detected, stopping");
+            
+            // Return with no space found
+            DetectParkingSpaceReturn falseSpace = {LEFT, false};
+            return falseSpace;
+        }
+        
         // Get fresh sensor readings each time
         bool rearLeftClear = Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor) >= MIN_SLOT_WIDTH_CM;
         bool frontLeftClear = Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
