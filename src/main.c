@@ -42,7 +42,7 @@ bool CheckForObstacle(void);
 // Helper function to check for obstacles using the ultrasonic sensors
 bool CheckForObstacle(void)
 {
-    const uint32_t OBSTACLE_THRESHOLD_CM = 10; // Adjust threshold as needed
+    //const uint32_t OBSTACLE_THRESHOLD_CM = 10; // Adjust threshold as needed
 
     // Check all sensors for obstacles
     // if (Ultrasonic_MeasureDistance(&frontLeftUltrasonicSensor) < OBSTACLE_THRESHOLD_CM ||
@@ -258,8 +258,8 @@ void ParkBabyRight(void)
     Bluetooth_SendMessage(&bluetooth, "Step 3: moving forward to parked space");
     Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-    Motor_SetSpeed(&leftMotor, 70);
-    Motor_SetSpeed(&rightMotor, 70); // Slightly slower to curve into space
+    Motor_SetSpeed(&leftMotor, 80);
+    Motor_SetSpeed(&rightMotor, 80); // Slightly slower to curve into space
 
     // Check for obstacles while backing in
     elapsed_time = 0;
@@ -293,40 +293,40 @@ void ParkBabyLeft(void)
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
 
-    Bluetooth_SendMessage(&bluetooth, "Starting left-side parking maneuver...");
+    Bluetooth_SendMessage(&bluetooth, "Starting right-side parking maneuver...");
 
     // Check for obstacles while moving forward
     uint16_t elapsed_time = 0;
     uint16_t target_time = 500;
     uint16_t check_interval = 50; // Check every 50ms
 
+
     // Stop briefly
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
     delay_ms(1000);
 
-    // Step 2: Turn left to begin parking
-    Bluetooth_SendMessage(&bluetooth, "Step 2: Turning left");
-    Motor_SetDirection(&leftMotor,MOTOR_BACKWARD );
-    Motor_SetDirection(&rightMotor,MOTOR_FORWARD );
-
+    // Step 2: Turn right to begin parking
+    Bluetooth_SendMessage(&bluetooth, "Step 2: Turning Left");
+    Motor_SetDirection(&leftMotor, MOTOR_BACKWARD);
+    Motor_SetDirection(&rightMotor,  MOTOR_FORWARD );
     Motor_SetSpeed(&leftMotor, 80);
     Motor_SetSpeed(&rightMotor, 80);
 
     // Check for obstacles while turning
     elapsed_time = 0;
-    target_time = 1000;
+    target_time = 1800;
 
     while (elapsed_time < target_time)
     {
-        if (CheckForObstacle())
-        {
-            Motor_SetDirection(&leftMotor, MOTOR_STOP);
-            Motor_SetDirection(&rightMotor, MOTOR_STOP);
-            Bluetooth_SendMessage(&bluetooth, "OBSTACLE DETECTED! Stopping.");
-            BlinkStatusLED(5);
-            return;
-        }
+        // if (CheckForObstacle())
+        // {
+        //     Motor_SetDirection(&leftMotor, MOTOR_STOP);
+        //     Motor_SetDirection(&rightMotor, MOTOR_STOP);
+        //     Bluetooth_SendMessage(&bluetooth, "OBSTACLE DETECTED! Stopping.");
+        //     BlinkStatusLED(5);
+        //     return;
+        // }
         delay_ms(check_interval);
         elapsed_time += check_interval;
     }
@@ -336,16 +336,16 @@ void ParkBabyLeft(void)
     Motor_SetDirection(&rightMotor, MOTOR_STOP);
     delay_ms(1000);
 
-    // Step 3: Move forward to parked space
+    // Step 3: Reverse into parking space
     Bluetooth_SendMessage(&bluetooth, "Step 3: moving forward to parked space");
     Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-    Motor_SetSpeed(&leftMotor, 90);
-    Motor_SetSpeed(&rightMotor, 90); // Equal speed for both motors
+    Motor_SetSpeed(&leftMotor, 80);
+    Motor_SetSpeed(&rightMotor, 80); // Slightly slower to curve into space
 
-    // Check for obstacles while moving forward
+    // Check for obstacles while backing in
     elapsed_time = 0;
-    target_time = 1000;
+    target_time = 1200;
 
     while (elapsed_time < target_time)
     {
@@ -367,7 +367,7 @@ void ParkBabyLeft(void)
     delay_ms(1000);
 
     Bluetooth_SendMessage(&bluetooth, "Left-side parking complete!");
-    BlinkStatusLED(2);
+    SetStatusLED(GPIO_HIGH);
 }
 // Simple serial data reading function with blocking behavior
 Command CheckForCommand(void)
@@ -482,7 +482,7 @@ int main(void)
         // Process commands
         if (cmd == COMMAND_START_PARKING)
         {
-            Bluetooth_SendMessage(&bluetooth, "I WILL FIND A SPACE NIGGA");
+            Bluetooth_SendMessage(&bluetooth, "I WILL FIND A SPACE");
             while (1)
             {
                 if (IR_DetectObstacle(&rightIRSensor))
@@ -496,15 +496,15 @@ int main(void)
                 // Process commands
                 if (hi.detected && hi.direction == LEFT)
                 {
-                    Bluetooth_SendMessage(&bluetooth, "I AM LEFT PARKING NIGGA");
-                    //ParkBabyLeft();
+                    Bluetooth_SendMessage(&bluetooth, "I AM LEFT PARKING");
+                    ParkBabyLeft();
                    
                     break;
                 }
                 if (hi.detected && hi.direction == RIGHT)
                 {
                     // Execute right-side parking maneuver
-                    Bluetooth_SendMessage(&bluetooth, "I AM RIGHT PARKING NIGGA");
+                    Bluetooth_SendMessage(&bluetooth, "I AM RIGHT PARKING");
                     ParkBabyRight();
                    
                     break;
@@ -512,7 +512,6 @@ int main(void)
             
             }
         }
-        Bluetooth_SendMessage(&bluetooth, "fck you");
     }
     return 0;
 }

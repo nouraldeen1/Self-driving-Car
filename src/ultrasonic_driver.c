@@ -57,7 +57,7 @@ uint32_t Ultrasonic_MeasureDistance(UltrasonicSensor* sensor) {
         timeout_counter++;
         if (timeout_counter > 60000) {  // Timeout to prevent hanging
             TCCR1B = saved_tccr1b;      // Restore timer configuration
-            return 0;                   // Return 0 if no response
+            return 40;                   // Return 0 if no response
         }
     }
     
@@ -70,7 +70,7 @@ uint32_t Ultrasonic_MeasureDistance(UltrasonicSensor* sensor) {
         timeout_counter++;
         if (timeout_counter > 60000) {  // Timeout to prevent hanging
             TCCR1B = saved_tccr1b;      // Restore timer configuration
-            return 0;                   // Return 0 if echo stays high
+            return 40;                   // Return 0 if echo stays high
         }
     }
     
