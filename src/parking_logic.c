@@ -3,8 +3,8 @@
 #include "../inc/avr_registers.h"
 #include <stdint.h>
 #include <stdbool.h>
-
-#define LED_PIN 19             // Arduino Uno onboard LED
+#include "../inc/bluetooth_driver.h"
+#define LED_PIN 19              // Arduino Uno onboard LED
 #define NUMBER_oF_ITERATIONS 10 // Number of iterations for the loop
 // External function for delay
 extern void delay_ms(uint32_t ms);
@@ -30,19 +30,18 @@ void MoveVerySlowly(Motor *leftMotor, Motor *rightMotor, MotorDirection directio
         delay_ms(1000);
     }
 }
-DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor, 
-                                           UltrasonicSensor *rearLeftUtrasonicSensor, 
-                                           UltrasonicSensor *frontLeftUltrasonicSensor, 
-                                           UltrasonicSensor *frontRightUltrasonicSensor, 
-                                           UltrasonicSensor *rearRightUltrasonicSensor, 
-                                           IRSensor *IRSensor, ParkingSlot *slot)
+DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
+                                            UltrasonicSensor *rearLeftUtrasonicSensor,
+                                            UltrasonicSensor *frontLeftUltrasonicSensor,
+                                            UltrasonicSensor *frontRightUltrasonicSensor,
+                                            UltrasonicSensor *rearRightUltrasonicSensor,
+                                            IRSensor *IRSensor, ParkingSlot *slot,BluetoothModule *bluetooth)
 {
     // Set motors to move forward
     Motor_SetSpeed(leftMotor, 65);
     Motor_SetSpeed(rightMotor, 65);
     Motor_SetDirection(leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
-
 
     // Constants
     const uint32_t MIN_SLOT_WIDTH_CM = 20;
@@ -57,41 +56,62 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
         bool frontLeftClear = Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
         bool rearRightClear = Ultrasonic_MeasureDistance(rearRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
         bool frontRightClear = Ultrasonic_MeasureDistance(frontRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
-        
+        char debug_msg[50];
+        sprintf(debug_msg, "Left braa: R=%d, F=%d",
+                (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+        Bluetooth_SendMessage(&bluetooth, debug_msg);
         // Check for left side parking space
-        if (rearLeftClear && frontLeftClear)
+        // Check for left side parking space
+        if (rearLeftClear&&frontLeftClear)
         {
+            // Debug print at start of detection
+            char debug_msg[50];
+            sprintf(debug_msg, "Left initial: R=%d, F=%d",
+                    (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                    (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+            Bluetooth_SendMessage(&bluetooth, debug_msg);
+
             // Confirm with additional readings
-            uint8_t confirmations = 1;
-            for (int j = 0; j < REQUIRED_CONFIRMATIONS; j++)
+            uint8_t confirmations = 0;                           // Start at 0 instead of 1
+            for (int j = 0; j < REQUIRED_CONFIRMATIONS + 2; j++) // Give more chances
             {
                 delay_ms(DELAY_BETWEEN_READINGS);
-                
+
                 // Get new readings
                 rearLeftClear = Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor) >= MIN_SLOT_WIDTH_CM;
                 frontLeftClear = Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
-                
+
                 if (rearLeftClear && frontLeftClear)
                 {
+                    // Debug print for confirmation
+                    sprintf(debug_msg, "L confirm: %d/%d", confirmations, REQUIRED_CONFIRMATIONS);
+                    Bluetooth_SendMessage(&bluetooth, debug_msg);
+
+                    // Increment confirmations only if both sensors are clear
                     confirmations++;
+                }
+                else if (confirmations > 0) // If one sensor fails after some confirmations
+                {
+                    confirmations++;
+                    sprintf(debug_msg, "L confirm: %d/%d", confirmations, REQUIRED_CONFIRMATIONS);
+                    Bluetooth_SendMessage(&bluetooth, debug_msg);
+
                     if (confirmations >= REQUIRED_CONFIRMATIONS)
                     {
                         // Stop motors
                         Motor_SetSpeed(leftMotor, 0);
                         Motor_SetSpeed(rightMotor, 0);
-                        
+
                         // Return result
                         DetectParkingSpaceReturn space = {LEFT, true};
                         return space;
                     }
                 }
-                else
-                {
-                    break; // Space not confirmed
-                }
+                // Don't break on a single failure - just don't increment confirmations
             }
         }
-        
+
         // Check for right side parking space
         if (rearRightClear && frontRightClear)
         {
@@ -100,11 +120,11 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
             for (int j = 0; j < REQUIRED_CONFIRMATIONS; j++)
             {
                 delay_ms(DELAY_BETWEEN_READINGS);
-                
+
                 // Get new readings
                 rearRightClear = Ultrasonic_MeasureDistance(rearRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
                 frontRightClear = Ultrasonic_MeasureDistance(frontRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
-                
+
                 if (rearRightClear && frontRightClear)
                 {
                     confirmations++;
@@ -113,7 +133,7 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
                         // Stop motors
                         Motor_SetSpeed(leftMotor, 0);
                         Motor_SetSpeed(rightMotor, 0);
-                        
+
                         // Return result
                         DetectParkingSpaceReturn space = {RIGHT, true};
                         return space;
@@ -125,10 +145,10 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
                 }
             }
         }
-        
+
         delay_ms(DELAY_BETWEEN_READINGS);
     }
-    
+
     // No space found - stop motors and return
     Motor_SetSpeed(leftMotor, 0);
     Motor_SetSpeed(rightMotor, 0);

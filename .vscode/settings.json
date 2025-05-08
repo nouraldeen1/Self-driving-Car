@@ -72,6 +72,7 @@
     "main.h": "c",
     "arduino.h": "c",
     "pwm_driver.h": "c",
-    "interrupt.h": "c"
+    "interrupt.h": "c",
+    "avr_registers.h": "c"
   }
 }

@@ -492,12 +492,12 @@ int main(void)
                     Motor_SetDirection(&rightMotor, MOTOR_STOP);
                     break;
                 }
-                DetectParkingSpaceReturn hi = DetectParkingSpace(&leftMotor, &rightMotor, &rearLeftUltrasonicSensor, &frontLeftUltrasonicSensor, &frontRightUltrasonicSensor, &rearRightUltrasonicSensor, &rightIRSensor, NULL);
+                DetectParkingSpaceReturn hi = DetectParkingSpace(&leftMotor, &rightMotor, &rearLeftUltrasonicSensor, &frontLeftUltrasonicSensor, &frontRightUltrasonicSensor, &rearRightUltrasonicSensor, &rightIRSensor, NULL, &bluetooth);
                 // Process commands
                 if (hi.detected && hi.direction == LEFT)
                 {
                     Bluetooth_SendMessage(&bluetooth, "I AM LEFT PARKING NIGGA");
-                    ParkBabyLeft();
+                    //ParkBabyLeft();
                    
                     break;
                 }

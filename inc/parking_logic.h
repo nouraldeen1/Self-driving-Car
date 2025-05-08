@@ -7,7 +7,7 @@
 #include "motor_driver.h"
 #include "ultrasonic_driver.h"
 #include "ir_sensor.h"
-
+#include "bluetooth_driver.h"
 // Parking types
 typedef enum {
     PARALLEL_PARKING,
@@ -32,7 +32,7 @@ typedef struct {
 }DetectParkingSpaceReturn;
 
 // Function prototypes - for 1 ultrasonic sensor and 2 IR sensors
-DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor* , UltrasonicSensor*, UltrasonicSensor*,UltrasonicSensor*,  IRSensor* rightIRSensor, ParkingSlot* slot);
+DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,UltrasonicSensor* , UltrasonicSensor*, UltrasonicSensor*,UltrasonicSensor*,  IRSensor* rightIRSensor, ParkingSlot* slot,BluetoothModule*);
 
 void ExecuteParallelParking(Motor* leftMotor, Motor* rightMotor, 
                           UltrasonicSensor* ultrasonicSensor, 
