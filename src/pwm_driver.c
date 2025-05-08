@@ -133,8 +133,7 @@ void PWM_SetDutyCycle(PWM_Channel* pwm, uint8_t duty_cycle) {
 }
 
 void PWM_Start(PWM_Channel* pwm) {
-    // PWM is automatically running after initialization
-    // This function is for API compatibility
+
 }
 
 void PWM_Stop(PWM_Channel* pwm) {

@@ -511,6 +511,7 @@ int main(void)
                 }
             
             }
+            SetStatusLED(GPIO_LOW);
         }
     }
     return 0;

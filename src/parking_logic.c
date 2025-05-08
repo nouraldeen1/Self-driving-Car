@@ -44,7 +44,7 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
     Motor_SetDirection(rightMotor, MOTOR_FORWARD);
 
     // Constants
-    const uint32_t MIN_SLOT_WIDTH_CM = 15;
+    const uint32_t MIN_SLOT_WIDTH_CM = 20;
     const uint8_t REQUIRED_CONFIRMATIONS = 1;
     const uint32_t DELAY_BETWEEN_READINGS = 100; // ms
 
@@ -127,10 +127,19 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
                 // Get new readings
                 rearRightClear = Ultrasonic_MeasureDistance(rearRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
                 frontRightClear = Ultrasonic_MeasureDistance(frontRightUltrasonicSensor) >= MIN_SLOT_WIDTH_CM;
-
+                char debug_msg[50];
+                sprintf(debug_msg, "Rb: R=%d, F=%d",
+                        (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                        (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+                Bluetooth_SendMessage(&bluetooth, debug_msg);
                 if (rearRightClear && frontRightClear)
                 {
                     confirmations++;
+                    char debug_msg[50];
+                    sprintf(debug_msg, "RC: R=%d, F=%d",
+                            (int)Ultrasonic_MeasureDistance(rearLeftUtrasonicSensor),
+                            (int)Ultrasonic_MeasureDistance(frontLeftUltrasonicSensor));
+                    Bluetooth_SendMessage(&bluetooth, debug_msg);
                     if (confirmations >= REQUIRED_CONFIRMATIONS)
                     {
                         // Stop motors

@@ -59,7 +59,7 @@ void Timer_Init(uint32_t timer_base, uint32_t prescaler, uint32_t auto_reload) {
         // Set compare match value
         OCR1A = auto_reload;
     }
-    // Add similar code for Timer0 and Timer2 if needed
+
 }
 
 void Timer_Start(uint32_t timer_base) {
