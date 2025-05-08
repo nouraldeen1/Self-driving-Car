@@ -45,7 +45,7 @@ DetectParkingSpaceReturn DetectParkingSpace(Motor *leftMotor, Motor *rightMotor,
 
 
     // Constants
-    const uint32_t MIN_SLOT_WIDTH_CM = 15;
+    const uint32_t MIN_SLOT_WIDTH_CM = 20;
     const uint8_t REQUIRED_CONFIRMATIONS = 3;
     const uint32_t DELAY_BETWEEN_READINGS = 100; // ms
 

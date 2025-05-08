@@ -187,12 +187,12 @@ void ParkBaby(void)
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
 
     // Use slow speed for final positioning
-    Motor_SetSpeed(&leftMotor, 100);
-    Motor_SetSpeed(&rightMotor, 100);
+    Motor_SetSpeed(&leftMotor, 70);
+    Motor_SetSpeed(&rightMotor, 70);
 
     // Move forward slightly (short duration)
     // SetStatusLED(GPIO_HIGH);
-    delay_ms(1700); // Adjust based on how far forward you want to move
+    delay_ms(1200); // Adjust based on how far forward you want to move
 
     // Stop when parking is complete
     Motor_SetDirection(&leftMotor, MOTOR_STOP);
@@ -258,12 +258,12 @@ void ParkBabyRight(void)
     Bluetooth_SendMessage(&bluetooth, "Step 3: moving forward to parked space");
     Motor_SetDirection(&leftMotor, MOTOR_FORWARD);
     Motor_SetDirection(&rightMotor, MOTOR_FORWARD);
-    Motor_SetSpeed(&leftMotor, 90);
-    Motor_SetSpeed(&rightMotor, 90); // Slightly slower to curve into space
+    Motor_SetSpeed(&leftMotor, 70);
+    Motor_SetSpeed(&rightMotor, 70); // Slightly slower to curve into space
 
     // Check for obstacles while backing in
     elapsed_time = 0;
-    target_time = 1000;
+    target_time = 1200;
 
     while (elapsed_time < target_time)
     {
@@ -285,7 +285,7 @@ void ParkBabyRight(void)
     delay_ms(1000);
 
     Bluetooth_SendMessage(&bluetooth, "Right-side parking complete!");
-    SetStatusLED(GPIO_HIGH);;
+    SetStatusLED(GPIO_HIGH);
 }
 // Left-side parking maneuver with obstacle detection
 void ParkBabyLeft(void)
