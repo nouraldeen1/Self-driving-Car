@@ -511,6 +511,7 @@ int main(void)
                 }
             
             }
+            delay_ms(10000); 
             SetStatusLED(GPIO_LOW);
         }
     }
